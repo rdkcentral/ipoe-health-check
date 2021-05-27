@@ -42,7 +42,6 @@
 #include <linux/if_ether.h>
 
 #include "ihc_main.h"
-#include "telemetry.h"
 
 /**************** Defines ***************************************/
 #define IHC_LOOP_TIMOUT 1
@@ -1353,8 +1352,7 @@ int ihc_echo_handler(void)
                             g_echo_V4_success_count++;
                             if( g_echo_V4_success_count >= IHC_DEFAULT_LIMIT )
                             {
-                                IhcDebug("V4 startup sequence success. Normal sequence starts");
-                                LOG_TELEMETRY(IHC_V4_STARTUP_COMPLETED);
+                                IhcNotice("IHC_V4_STARTUP_COMPLETED :: IHC: IPOE health check(IPv4) startup sequence completed");
                                 v4_startup_sequence_completed = TRUE;
                                 ipv4_echo_time_interval = IHC_DEFAULT_REGULAR_INTERVAL; //Regular Interval 30s
                                 /* Send the message to WAN Manager that the IPv4 connection is up */
@@ -1371,7 +1369,7 @@ int ihc_echo_handler(void)
 
                         if( ( FALSE == Is_v4_bfd_1stpkt_success_occurs ) && ( 0 < g_echo_V4_success_count ) )
                         {
-                            LOG_TELEMETRY(IHC_V4_1ST_PKT_SUCCESS);
+                            IhcNotice("IHC_V4_1ST_PKT_SUCCESS :: IHC: IPOE health check(IPv4) first packet success");
                             Is_v4_bfd_1stpkt_success_occurs = TRUE;
                         }
                     }
@@ -1409,8 +1407,7 @@ int ihc_echo_handler(void)
                             g_echo_V6_success_count++;
                             if( g_echo_V6_success_count >= IHC_DEFAULT_LIMIT )
                             {
-                                IhcDebug("V6 startup sequence success. Normal sequence starts");
-                                LOG_TELEMETRY(IHC_V6_STARTUP_COMPLETED);
+                                IhcNotice("IHC_V6_STARTUP_COMPLETED :: IHC: IPOE health check(IPv6) startup sequence completed");
                                 v6_startup_sequence_completed = TRUE;
                                 ipv6_echo_time_interval = IHC_DEFAULT_REGULAR_INTERVAL; //Regular Interval 30s
                                 /* Send a message to WAN Manager that the IPV6 connection is up */
@@ -1427,7 +1424,7 @@ int ihc_echo_handler(void)
 
                         if( ( FALSE == Is_v6_bfd_1stpkt_success_occurs ) && ( 0 < g_echo_V6_success_count ) )
                         {
-                            LOG_TELEMETRY(IHC_V6_1ST_PKT_SUCCESS);
+                            IhcNotice("IHC_V6_1ST_PKT_SUCCESS :: IHC: IPOE health check(IPv6) first packet success");
                             Is_v6_bfd_1stpkt_success_occurs = TRUE;
                         }
                     }
@@ -1476,13 +1473,11 @@ int ihc_echo_handler(void)
                                         IhcError("Sending IPOE_MSG_IHC_ECHO_FAIL_IPV4 failed");
                                     }
                                 }
-
-                                LOG_TELEMETRY(IHC_V4_FAIL);
+                                IhcError("IHC_V4_FAIL :: IHC: IPOE health check for IPv4 has failed");
                             }
                             else  /*...IPOE v4 check goes to IDLE after 3 continuous Failre echo in 'Startup Sequence'... */
                             {
-                                IhcDebug("[%s:%d] v4 TX goes to IDLE", __FUNCTION__, __LINE__);
-                                LOG_TELEMETRY(IHC_V4_IDLE);
+                                IhcError("IHC_V4_IDLE :: IHC: IPOE health check(IPv4) IDLE");
                             }
                             ihc_stop_echo_packets(IHC_ECHO_TYPE_V4);
                             ipv4_echo_time_interval = IHC_DEFAULT_RETRY_INTERVAL;
@@ -1515,7 +1510,7 @@ int ihc_echo_handler(void)
 
                                         if( ( FALSE == Is_v4_bfd_1stpkt_failure_occurs ) && ( 0 <  g_echo_V4_failure_count ) )
                                         {
-                                            LOG_TELEMETRY(IHC_V4_1ST_PKT_FAILURE);
+                                            IhcError("IHC_V4_1ST_PKT_FAILURE :: IHC: IPOE health check(IPv4) first packet failure");
                                             Is_v4_bfd_1stpkt_failure_occurs = TRUE;
                                         }
 
@@ -1566,13 +1561,11 @@ int ihc_echo_handler(void)
                                         IhcError("Sending IPOE_MSG_IHC_ECHO_FAIL_IPV6 failed");
                                     }
                                 }
-
-                                LOG_TELEMETRY(IHC_V6_FAIL);
+                                IhcError("IHC_V6_FAIL :: IHC: IPOE health check for IPv6 has failed");
                             }
                             else  /*...IPOE v6 check goes to IDLE after 3 continuous Failre echo in 'Startup Sequence'... */
                             {
-                                IhcError("v6 TX goes to IDLE");
-                                LOG_TELEMETRY(IHC_V6_IDLE);
+                                IhcError("IHC_V6_IDLE :: IHC: IPOE health check(IPv6) IDLE");
                             }
                             ihc_stop_echo_packets(IHC_ECHO_TYPE_V6);
                             ipv6_echo_time_interval = IHC_DEFAULT_RETRY_INTERVAL;
@@ -1604,7 +1597,7 @@ int ihc_echo_handler(void)
 
                                         if( ( FALSE == Is_v6_bfd_1stpkt_failure_occurs ) && ( g_echo_V6_failure_count > 0 ) )
                                         {
-                                            LOG_TELEMETRY(IHC_V6_1ST_PKT_FAILURE);
+                                            IhcError("IHC_V6_1ST_PKT_FAILURE :: IHC: IPOE health check(IPv6) first packet failure");
                                             Is_v6_bfd_1stpkt_failure_occurs = TRUE;
                                         }
 

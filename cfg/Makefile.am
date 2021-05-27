@@ -1,8 +1,11 @@
 ##########################################################################
-# If not stated otherwise in this file or this component's Licenses.txt
-# file the following copyright and licenses apply:
-#
-# Copyright 2017 RDK Management
+# Copyright (C) 2020 Sky
+# --------------------------------------------------------------------------
+# THIS SOFTWARE CONTRIBUTION IS PROVIDED ON BEHALF OF SKY PLC.
+# BY THE CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING,
+# BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+# A PARTICULAR PURPOSE ARE DISCLAIMED
+# ******************************************************************
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,11 +19,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ##########################################################################
+SUBDIRS = 
+DIST_SUBDIRS = 
 
-bin_PROGRAMS = ipoe_health_check
-
-AM_CPPFLAGS = -I$(top_srcdir)/../CcspCommonLibrary/source/ccsp/components/include
-
-ipoe_health_check_CFLAGS = -D_ANSC_LINUX -D_ANSC_USER -D_ANSC_LITTLE_ENDIAN_ -DFEATURE_SUPPORT_RDKLOG $(DBUS_CFLAGS) $(SYSTEMD_CFLAGS)
-ipoe_health_check_SOURCES = ihc_core.c  ihc_main.c
-ipoe_health_check_LDFLAGS = -lccsp_common -lrdkloggers -lnanomsg

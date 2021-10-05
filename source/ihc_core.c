@@ -182,12 +182,12 @@ static int ihc_get_V6_bng_MAC_address(char *ipAddress, char *MACAddress)
                     token = strtok(NULL, ":");
                 }
 
-                if (strlen(MACAddress) > 0)
+                if (strlen(MACAddress) > 0 && strstr(MACAddress, ":" ))
                 {
                     MACAddress[strlen(MACAddress) - IHC_STRIP_LAST_CHAR_INDEX] = '\0'; //strip of last "\n:"
+                    // return success only if we have a valid mac
+                    ret = IHC_SUCCESS;
                 }
-
-                ret = IHC_SUCCESS;
             }
             pclose(fp);
         }
@@ -236,9 +236,14 @@ static int ihc_get_V4_bng_MAC_address(char *ipAddress, char *MACAddress)
                     strcat(MACAddress, tmpString);
                     token = strtok(NULL, ":");
                 }
-                MACAddress[strlen(MACAddress) - IHC_STRIP_LAST_CHAR_INDEX] = '\0'; //strip of last "\n:"
+                
+                if (strlen(MACAddress) > 0 && strstr(MACAddress, ":"))
+                {
+                    MACAddress[strlen(MACAddress) - IHC_STRIP_LAST_CHAR_INDEX] = '\0'; //strip of last "\n:"
+                    // return success only if we have a valid gateway mac in arp cache
+                    ret = IHC_SUCCESS;
+                }
                 IhcDebug("[%s: %d] BNG MAC: %s", __FUNCTION__, __LINE__, MACAddress);
-                ret = IHC_SUCCESS;
             }
             pclose(fp);
         }
@@ -1488,34 +1493,37 @@ int ihc_echo_handler(void)
                             IhcDebug("[%s:%d] Sending V4 echo packets interface [%s] defaultGateway [%s]", __FUNCTION__, __LINE__, wanInterface, defaultGatewayV4);
 
                             char BNGMACAddress[IHC_MAX_STRING_LENGTH] = {0};
-
-                            if (ihc_get_V4_bng_MAC_address(defaultGatewayV4, BNGMACAddress) != IHC_FAILURE)
+                            // if current arp entry has a valid entry , update the global mac array BNGMACAddressV4
+                            if (ihc_get_V4_bng_MAC_address(defaultGatewayV4, BNGMACAddress) == IHC_SUCCESS)
                             {
-                                if( strstr(BNGMACAddress,":") && strcasecmp(BNGMACAddressV4,BNGMACAddress) ) //Check if it is valid MAC address and any difference in MAC address
+                                // update the global mac cache array if this is a new mac from arp cache
+                                if( strncasecmp(BNGMACAddressV4,BNGMACAddress, strlen(BNGMACAddress)) != 0) 
                                 {
                                     strncpy(BNGMACAddressV4, BNGMACAddress, IHC_MAX_STRING_LENGTH); //Cache BNG MAC address
                                 }
-
-                                if( strlen(BNGMACAddressV4) > 0 ) // Send V4 echo packets
+                            }
+                            /* There are different reasons for a lost mac in arp cache. ipoe session should always be active
+                            irrespective of arp cache entry. So send the packet using the current GW mac kept in mac array
+                            */
+                            if( strlen(BNGMACAddressV4) > 0 && strstr(BNGMACAddressV4,":")) // Send V4 echo packets
+                            {
+                                char tmpBNGMACAddress[IHC_MAX_STRING_LENGTH] = {0};
+                                strncpy(tmpBNGMACAddress, BNGMACAddressV4, IHC_MAX_STRING_LENGTH);
+                                if (!ihc_sendV4EchoPackets(wanInterface, tmpBNGMACAddress))
                                 {
-                                    char tmpBNGMACAddress[IHC_MAX_STRING_LENGTH] = {0};
-                                    strncpy(tmpBNGMACAddress, BNGMACAddressV4, IHC_MAX_STRING_LENGTH);
-                                    if (!ihc_sendV4EchoPackets(wanInterface, tmpBNGMACAddress))
-                                    {
-                                        ipv4_echo_time_interval = IHC_DEFAULT_RETRY_INTERVAL;
+                                    ipv4_echo_time_interval = IHC_DEFAULT_RETRY_INTERVAL;
 
-                                        if( ( FALSE == Is_v4_bfd_1stpkt_failure_occurs ) && ( 0 <  g_echo_V4_failure_count ) )
-                                        {
-                                            IhcError("IHC_V4_1ST_PKT_FAILURE :: IHC: IPOE health check(IPv4) first packet failure");
-                                            Is_v4_bfd_1stpkt_failure_occurs = TRUE;
-                                        }
-
-                                        g_echo_V4_failure_count++;
-                                    }
-                                    else
+                                    if( ( FALSE == Is_v4_bfd_1stpkt_failure_occurs ) && ( 0 <  g_echo_V4_failure_count ) )
                                     {
-                                        IhcError("ihc_sendV4EchoPackets failed %s", strerror(errno));
+                                        IhcError("IHC_V4_1ST_PKT_FAILURE :: IHC: IPOE health check(IPv4) first packet failure");
+                                        Is_v4_bfd_1stpkt_failure_occurs = TRUE;
                                     }
+
+                                    g_echo_V4_failure_count++;
+                                }
+                                else
+                                {
+                                    IhcError("ihc_sendV4EchoPackets failed %s", strerror(errno));
                                 }
                             }
                         }
@@ -1576,33 +1584,36 @@ int ihc_echo_handler(void)
                             IhcDebug("Sending V6 echo packets interface [%s] defaultGateway [%s]", wanInterface, defaultGatewayV6);
                             char BNGMACAddress[IHC_MAX_STRING_LENGTH] = {0};
 
-                            if (ihc_get_V6_bng_MAC_address(defaultGatewayV6, BNGMACAddress) != IHC_FAILURE)
+                            //update global mac array if arp cacahe has a new valid mac entry for GW
+                            if (ihc_get_V6_bng_MAC_address(defaultGatewayV6, BNGMACAddress) == IHC_SUCCESS)
                             {
-                                if( strstr(BNGMACAddress,":") && strcmp(BNGMACAddressV6,BNGMACAddress) ) //Check if it is valid MAC address and any difference in MAC address
+                                if( strncasecmp(BNGMACAddressV6, BNGMACAddress, strlen(BNGMACAddress)) ) 
                                 {
-                                    strncpy(BNGMACAddressV6, BNGMACAddress, IHC_MAX_STRING_LENGTH); //cache the BNG MAC address
+                                    strncpy(BNGMACAddressV6, BNGMACAddress, IHC_MAX_STRING_LENGTH); 
                                 }
-
-                                if( strlen(BNGMACAddressV6) > 0 ) // Send V6 echo packets
+                            }
+                            /* There are different reasons for a lost mac in arp cache. ipoe session should always be active
+                            irrespective of arp cache entry. So send the packet using the current GW mac kept in mac array
+                            */
+                            if( strlen(BNGMACAddressV6) > 0  && strstr(BNGMACAddressV6,":")) // Send V6 echo packets
+                            {
+                                char tmpBNGMACAddress[IHC_MAX_STRING_LENGTH] = {0};
+                                strncpy(tmpBNGMACAddress, BNGMACAddressV6, IHC_MAX_STRING_LENGTH);
+                                if (!ihc_sendV6EchoPackets(wanInterface, tmpBNGMACAddress))
                                 {
-                                    char tmpBNGMACAddress[IHC_MAX_STRING_LENGTH] = {0};
-                                    strncpy(tmpBNGMACAddress, BNGMACAddressV6, IHC_MAX_STRING_LENGTH);
-                                    if (!ihc_sendV6EchoPackets(wanInterface, tmpBNGMACAddress))
-                                    {
-                                        ipv6_echo_time_interval = IHC_DEFAULT_RETRY_INTERVAL;
+                                    ipv6_echo_time_interval = IHC_DEFAULT_RETRY_INTERVAL;
 
-                                        if( ( FALSE == Is_v6_bfd_1stpkt_failure_occurs ) && ( g_echo_V6_failure_count > 0 ) )
-                                        {
-                                            IhcError("IHC_V6_1ST_PKT_FAILURE :: IHC: IPOE health check(IPv6) first packet failure");
-                                            Is_v6_bfd_1stpkt_failure_occurs = TRUE;
-                                        }
-
-                                        g_echo_V6_failure_count++;
-                                    }
-                                    else
+                                    if( ( FALSE == Is_v6_bfd_1stpkt_failure_occurs ) && ( g_echo_V6_failure_count > 0 ) )
                                     {
-                                        IhcError("ihc_sendV6EchoPackets failed %s", strerror(errno));
+                                        IhcError("IHC_V6_1ST_PKT_FAILURE :: IHC: IPOE health check(IPv6) first packet failure");
+                                        Is_v6_bfd_1stpkt_failure_occurs = TRUE;
                                     }
+
+                                    g_echo_V6_failure_count++;
+                                }
+                                else
+                                {
+                                    IhcError("ihc_sendV6EchoPackets failed %s", strerror(errno));
                                 }
                             }
                         }

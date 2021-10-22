@@ -25,4 +25,4 @@ AM_CPPFLAGS = -I$(top_srcdir)/../CcspCommonLibrary/source/ccsp/components/includ
 
 ipoe_health_check_CFLAGS = -D_ANSC_LINUX -D_ANSC_USER -D_ANSC_LITTLE_ENDIAN_ -DFEATURE_SUPPORT_RDKLOG $(DBUS_CFLAGS) $(SYSTEMD_CFLAGS)
 ipoe_health_check_SOURCES = ihc_core.c  ihc_main.c
-ipoe_health_check_LDFLAGS = -lccsp_common -lrdkloggers -lnanomsg
+ipoe_health_check_LDFLAGS = -lccsp_common -lrdkloggers -lnanomsg -lsysevent

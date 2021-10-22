@@ -37,7 +37,7 @@
 #include <netdb.h>
 #include <sys/types.h>
 #include <linux/if_ether.h>
-
+#include <sysevent/sysevent.h>
 #include "ihc_main.h"
 
 /**************** Defines ***************************************/
@@ -67,6 +67,11 @@
 #define IS_EMPTY_STRING(s)    ((s == NULL) || (*s == '\0'))
 #define IHC_STRIP_LAST_CHAR_INDEX 2
 #define NANOSEC2SEC       1000000000.0
+#define IPOE_HEALTH_CHECK_V4_STATUS "ipoe_health_check_ipv4_status"
+#define IPOE_HEALTH_CHECK_V6_STATUS "ipoe_health_check_ipv6_status"
+#define IPOE_STATUS_SUCCESS "success"
+#define IPOE_STATUS_FAILED "failed"
+#define SYS_IP_ADDR    "127.0.0.1"
 
 /**************** Global Variables ******************************/
 static int g_send_V4_echo = 0;
@@ -88,6 +93,8 @@ static UBOOL8 Is_v4_bfd_1stpkt_success_occurs = FALSE;
 static UBOOL8 Is_v6_bfd_1stpkt_success_occurs = FALSE;
 
 static ipc_ihc_data_t wanConnectionData;
+static int sysevent_fd = -1;
+static token_t sysevent_token;
 /**************** Extern variables ******************************/
 
 extern int   ipcListenFd;
@@ -1195,6 +1202,7 @@ int ihc_echo_handler(void)
     char defaultGatewayV6[IHC_MAX_STRING_LENGTH] = {0};
     char BNGMACAddressV4[IHC_MAX_STRING_LENGTH] = {0};
     char BNGMACAddressV6[IHC_MAX_STRING_LENGTH] = {0};
+    char sysevent_name[] = "ipoe_sysevent";
     int echo_reply_socket_v4 = IHC_FAILURE;
     int echo_reply_socket_v6 = IHC_FAILURE;
     int ipv4_echo_time_interval = IHC_DEFAULT_REGULAR_INTERVAL;
@@ -1206,6 +1214,8 @@ int ihc_echo_handler(void)
 
     // init wan connection data
     memset(&wanConnectionData, 0, msgSize);
+
+    sysevent_fd =  sysevent_open(SYS_IP_ADDR, SE_SERVER_WELL_KNOWN_PORT, SE_VERSION, sysevent_name, &sysevent_token);
 
     for (;;)
     {
@@ -1361,6 +1371,12 @@ int ihc_echo_handler(void)
                                 {
                                     IhcError("Sending IPOE_MSG_IHC_ECHO_IPV4_UP failed");
                                 }
+                                // ping to v4 gw is success.
+                                // Set sysevent so that other modules(eg: selfheal) can detect the gw status for logging purpose
+                                if(sysevent_fd != -1)
+                                {
+                                    sysevent_set(sysevent_fd, sysevent_token, IPOE_HEALTH_CHECK_V4_STATUS, IPOE_STATUS_SUCCESS, 0);
+                                }
                             }
                         }
                         else
@@ -1415,6 +1431,12 @@ int ihc_echo_handler(void)
                                 if (ihc_broadcastEvent(IPOE_MSG_IHC_ECHO_IPV6_UP) != IHC_SUCCESS)
                                 {
                                     IhcError("Sending IPOE_MSG_IHC_ECHO_IPV6_UP failed");
+                                }
+                                // ping to v6 gw is success.
+                                // Set sysevent so that other modules(eg: selfheal) can detect the gw status for logging purpose
+                                if(sysevent_fd != -1)
+                                {
+                                    sysevent_set(sysevent_fd, sysevent_token, IPOE_HEALTH_CHECK_V6_STATUS, IPOE_STATUS_SUCCESS, 0);
                                 }
                             }
                         }
@@ -1483,6 +1505,13 @@ int ihc_echo_handler(void)
                             ihc_stop_echo_packets(IHC_ECHO_TYPE_V4);
                             ipv4_echo_time_interval = IHC_DEFAULT_RETRY_INTERVAL;
                         }
+                        // ping to v4 gw failed and reached limit.
+                        // Set sysevent so that other modules(eg: selfheal) can detect the gw status for logging purpose
+                        if(sysevent_fd != -1)
+                        {
+                            sysevent_set(sysevent_fd, sysevent_token, IPOE_HEALTH_CHECK_V4_STATUS, IPOE_STATUS_FAILED, 0);
+                        }
+
                     }
 
                     if (g_send_V4_echo)
@@ -1574,6 +1603,12 @@ int ihc_echo_handler(void)
                             ihc_stop_echo_packets(IHC_ECHO_TYPE_V6);
                             ipv6_echo_time_interval = IHC_DEFAULT_RETRY_INTERVAL;
                         }
+                        // ping to v6 gw failed and reached limit. 
+                        // Set sysevent so that other modules(eg: selfheal) can detect the gw status for logging purpose
+                        if(sysevent_fd != -1)
+                        {
+                            sysevent_set(sysevent_fd, sysevent_token, IPOE_HEALTH_CHECK_V6_STATUS, IPOE_STATUS_FAILED, 0);
+                        }
                     }
 
                     if (g_send_V6_echo)
@@ -1630,6 +1665,10 @@ int ihc_echo_handler(void)
                 }
             }
         }
+    }
+    if (0 <= sysevent_fd)
+    {
+        sysevent_close(sysevent_fd, sysevent_token);
     }
     return ret;  // We never actually reach this
 }

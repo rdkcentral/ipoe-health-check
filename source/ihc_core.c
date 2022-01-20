@@ -48,6 +48,7 @@
 #define IHC_MAX_STRING_LENGTH 256
 /* Packet constrcution related MACROS */
 #define IHC_MACADDR_LEN 6
+#define IHC_MACADDR_STR_LEN 29  // mac address format(0xHH:0xHH:0xHH:0xHH:0xHH:0xHH)
 #define IHC_ETHTYPE_LEN 2
 #define IHC_UDP_HDRLEN 8
 #define IHC_ETH_HDRLEN 14
@@ -93,6 +94,30 @@ static ipc_ihc_data_t wanConnectionData;
 extern int   ipcListenFd;
 
 /***************** Function defenitions *************************/
+
+/**
+ * @brief Function to validate the given mac address
+ *
+ * @param mac address of the router
+ * @return IHC_SUCCESS / IHC_FAILURE
+ */
+static int validateMacAddr(const char * mac)
+{
+    int ret = IHC_FAILURE;
+    uint32_t bytes[IHC_MACADDR_LEN]={0};
+    // mac address format(0xHH:0xHH:0xHH:0xHH:0xHH:0xHH)
+    if( NULL == mac || strlen(mac) != IHC_MACADDR_STR_LEN )
+    {
+         IhcError("[%s:%d] Invalid args mac[%s]", __FUNCTION__, __LINE__,(NULL == mac)?"NULL":mac);
+         return ret;
+    }
+    if( IHC_MACADDR_LEN == sscanf(mac, "%04X:%04X:%04X:%04X:%04X:%04X",
+            &bytes[5], &bytes[4], &bytes[3], &bytes[2], &bytes[1], &bytes[0]))
+    {
+         ret = IHC_SUCCESS;
+    }
+    return ret;
+}
 
 /**
  * @brief Function to get the global deligated prefix
@@ -186,7 +211,7 @@ static int ihc_get_V6_bng_MAC_address(char *ipAddress, char *MACAddress)
                 {
                     MACAddress[strlen(MACAddress) - IHC_STRIP_LAST_CHAR_INDEX] = '\0'; //strip of last "\n:"
                     // return success only if we have a valid mac
-                    ret = IHC_SUCCESS;
+                    ret = validateMacAddr(MACAddress);
                 }
             }
             pclose(fp);
@@ -241,7 +266,7 @@ static int ihc_get_V4_bng_MAC_address(char *ipAddress, char *MACAddress)
                 {
                     MACAddress[strlen(MACAddress) - IHC_STRIP_LAST_CHAR_INDEX] = '\0'; //strip of last "\n:"
                     // return success only if we have a valid gateway mac in arp cache
-                    ret = IHC_SUCCESS;
+                    ret = validateMacAddr(MACAddress);
                 }
                 IhcDebug("[%s: %d] BNG MAC: %s", __FUNCTION__, __LINE__, MACAddress);
             }
@@ -1505,7 +1530,7 @@ int ihc_echo_handler(void)
                             /* There are different reasons for a lost mac in arp cache. ipoe session should always be active
                             irrespective of arp cache entry. So send the packet using the current GW mac kept in mac array
                             */
-                            if( strlen(BNGMACAddressV4) > 0 && strstr(BNGMACAddressV4,":")) // Send V4 echo packets
+                            if( validateMacAddr(BNGMACAddressV4) == IHC_SUCCESS ) // Send V4 echo packets
                             {
                                 char tmpBNGMACAddress[IHC_MAX_STRING_LENGTH] = {0};
                                 strncpy(tmpBNGMACAddress, BNGMACAddressV4, IHC_MAX_STRING_LENGTH);
@@ -1524,7 +1549,13 @@ int ihc_echo_handler(void)
                                 else
                                 {
                                     IhcError("ihc_sendV4EchoPackets failed %s", strerror(errno));
+                                    g_echo_V4_failure_count++;
                                 }
+                            }
+                            else
+                            {
+                                IhcError("ihc_sendV4EchoPackets invalid BNGMAC[%s]", BNGMACAddressV4);
+                                g_echo_V4_failure_count++;
                             }
                         }
                         else
@@ -1595,7 +1626,7 @@ int ihc_echo_handler(void)
                             /* There are different reasons for a lost mac in arp cache. ipoe session should always be active
                             irrespective of arp cache entry. So send the packet using the current GW mac kept in mac array
                             */
-                            if( strlen(BNGMACAddressV6) > 0  && strstr(BNGMACAddressV6,":")) // Send V6 echo packets
+                            if( validateMacAddr(BNGMACAddressV6) == IHC_SUCCESS ) // Send V6 echo packets
                             {
                                 char tmpBNGMACAddress[IHC_MAX_STRING_LENGTH] = {0};
                                 strncpy(tmpBNGMACAddress, BNGMACAddressV6, IHC_MAX_STRING_LENGTH);
@@ -1614,7 +1645,13 @@ int ihc_echo_handler(void)
                                 else
                                 {
                                     IhcError("ihc_sendV6EchoPackets failed %s", strerror(errno));
+                                    g_echo_V6_failure_count++;
                                 }
+                            }
+                            else
+                            {
+                                IhcError("ihc_sendV6EchoPackets invalid BNGMAC[%s]",BNGMACAddressV6);
+                                g_echo_V6_failure_count++;
                             }
                         }
                         else

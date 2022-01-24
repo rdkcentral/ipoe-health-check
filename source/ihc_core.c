@@ -170,7 +170,7 @@ static int ihc_get_ipv6_global_address(char *globalAddress, size_t globalAddress
         ret = IHC_FAILURE;
     }
    
-    IhcDebug("[%s:%d] Global address returning as [%s]",__FUNCTION__, __LINE__, globalAddress);
+    IhcInfo("[%s:%d] Global address returning as [%s]",__FUNCTION__, __LINE__, globalAddress);
     return ret;
 }
 
@@ -275,7 +275,7 @@ static int ihc_get_V4_bng_MAC_address(char *ipAddress, char *MACAddress)
                     // return success only if we have a valid gateway mac in arp cache
                     ret = validateMacAddr(MACAddress);
                 }
-                IhcDebug("[%s: %d] BNG MAC: %s", __FUNCTION__, __LINE__, MACAddress);
+                IhcInfo("[%s: %d] BNG MAC: %s", __FUNCTION__, __LINE__, MACAddress);
             }
             pclose(fp);
         }
@@ -328,7 +328,7 @@ static int ihc_get_V6_defgateway_wan_interface(char *interface, size_t interface
                 if (token)
                 {
                     strncpy(defGateway, token, defGatewayLen);
-                    IhcDebug("IPv6 Default GW address  = %s", defGateway);
+                    IhcInfo("IPv6 Default GW address  = %s", defGateway);
                 }
                 else
                 {
@@ -379,7 +379,7 @@ static int ihc_get_V4_defgateway_wan_interface(char *interface, size_t interface
             return IHC_FAILURE;
         }
         strncpy(interface, wanConnectionData.ifName, interfaceLen);
-        IhcDebug("[%s: %d] WAN Physical Interface name = %s", __FUNCTION__, __LINE__, interface);
+        IhcInfo("[%s: %d] WAN Physical Interface name = %s", __FUNCTION__, __LINE__, interface);
 
         /* Default IPv4 GW. */
         char command[IHC_MAX_STRING_LENGTH] = {0};
@@ -398,7 +398,7 @@ static int ihc_get_V4_defgateway_wan_interface(char *interface, size_t interface
                 if (token)
                 {
                     strncpy(defGateway, token, defGatewayLen);
-                    IhcDebug("IPv4 Default GW address  = %s", defGateway);
+                    IhcInfo("IPv4 Default GW address  = %s", defGateway);
                 }
                 else
                 {
@@ -565,7 +565,7 @@ static int ihc_broadcastEvent(int message)
         return IHC_FAILURE;
     }
 
-    IhcDebug("[%s-%d] Successfully send %d bytes to wanmanager", __FUNCTION__, __LINE__, bytes);
+    IhcInfo("[%s-%d] Successfully send %d bytes to wanmanager", __FUNCTION__, __LINE__, bytes);
     nn_close (sock);
     return IHC_SUCCESS;
 
@@ -807,13 +807,13 @@ static int ihc_sendV6EchoPackets(char *interface, char *MACaddress)
             &dst_mac[macIdx++], &dst_mac[macIdx++], 
             &dst_mac[macIdx++], &dst_mac[macIdx]);
 
-    IhcDebug ("[%s :%d] BNG MAC %s",__FUNCTION__, __LINE__, MACaddress);
+    IhcInfo ("[%s :%d] BNG MAC %s",__FUNCTION__, __LINE__, MACaddress);
     if ((ret = ihc_get_ipv6_global_address(globalAddress, sizeof(globalAddress))) != IHC_SUCCESS)
     {
         IhcError("ihc_get_ipv6_global_address failed : %d ", ret);
         return IHC_FAILURE;
     }
-    IhcDebug ("[%s :%d] V6 IP %s",__FUNCTION__, __LINE__, globalAddress);
+    IhcInfo ("[%s :%d] V6 IP %s",__FUNCTION__, __LINE__, globalAddress);
     strcpy(src_ip, globalAddress);
 
     device.sll_family = AF_PACKET;
@@ -918,7 +918,7 @@ static int ihc_sendV6EchoPackets(char *interface, char *MACaddress)
     }
     else
     {
-        IhcDebug("Echo packets V6 TX [%u -> %u]", g_echo_V6_failure_count, g_echo_V6_failure_count + 1);
+        IhcInfo("Echo packets V6 TX [%u -> %u]", g_echo_V6_failure_count, g_echo_V6_failure_count + 1);
     }
 
     // Close V6 socket descriptor.
@@ -1083,7 +1083,7 @@ static int ihc_sendV4EchoPackets(char *interface, char *MACaddress)
         close(sockV4);
         return IHC_FAILURE;
     }
-    IhcDebug("Echo packets V4 TX [%u -> %u]", g_echo_V4_failure_count, g_echo_V4_failure_count + 1);
+    IhcInfo("Echo packets V4 TX [%u -> %u]", g_echo_V4_failure_count, g_echo_V4_failure_count + 1);
 
     close(sockV4); // close the socket
     return IHC_SUCCESS;
@@ -1148,7 +1148,7 @@ static int ihc_create_echo_reply_socket_v6()
         return IHC_FAILURE;
     }
 
-    IhcDebug("[%s:%d] Created ECHO Reply V6 socket : %d",__FUNCTION__, __LINE__, echo_reply_socket_v6);
+    IhcInfo("[%s:%d] Created ECHO Reply V6 socket : %d",__FUNCTION__, __LINE__, echo_reply_socket_v6);
     return echo_reply_socket_v6;
 }
 
@@ -1201,7 +1201,7 @@ static int ihc_create_echo_reply_socket_v4()
         return IHC_FAILURE;
     }
 
-    IhcDebug("[%s:%d] Created ECHO Reply V4 socket : %d",__FUNCTION__, __LINE__, echo_reply_socket_v4);
+    IhcInfo("[%s:%d] Created ECHO Reply V4 socket : %d",__FUNCTION__, __LINE__, echo_reply_socket_v4);
     return echo_reply_socket_v4;
 }
 /**
@@ -1252,7 +1252,7 @@ int ihc_echo_handler(void)
             switch (msgBody.msgType)
             {
                 case IPOE_MSG_WAN_CONNECTION_UP:
-                    IhcDebug("===== IPOE_MSG_WAN_CONNECTION_UP event received Intf = %s ======", msgBody.ifName);
+                    IhcInfo("===== IPOE_MSG_WAN_CONNECTION_UP event received Intf = %s ======", msgBody.ifName);
 
                     /* Store wan connection data */
                     strncpy(wanConnectionData.ifName, msgBody.ifName, sizeof(wanConnectionData.ifName));
@@ -1278,7 +1278,7 @@ int ihc_echo_handler(void)
                     break;
 
                 case IPOE_MSG_WAN_CONNECTION_DOWN:
-                    IhcDebug("===== IPOE_MSG_WAN_CONNECTION_DOWN event received ======");
+                    IhcInfo("===== IPOE_MSG_WAN_CONNECTION_DOWN event received ======");
                     /* Reset wan connection data */
                     memset(wanConnectionData.ipv4Address, 0, sizeof(wanConnectionData.ipv4Address));
 
@@ -1288,7 +1288,7 @@ int ihc_echo_handler(void)
                     break;
 
                 case IPOE_MSG_WAN_CONNECTION_IPV6_UP:
-                    IhcDebug("===== IPOE_MSG_WAN_CONNECTION_IPV6_UP event received Intf = %s ======", msgBody.ifName);
+                    IhcInfo("===== IPOE_MSG_WAN_CONNECTION_IPV6_UP event received Intf = %s ======", msgBody.ifName);
                     /* Store wan connection data */
                     strncpy(wanConnectionData.ifName, msgBody.ifName, sizeof(wanConnectionData.ifName));
                     strncpy(wanConnectionData.ipv6Address, msgBody.ipv6Address, sizeof(wanConnectionData.ipv6Address));
@@ -1313,7 +1313,7 @@ int ihc_echo_handler(void)
                     break;
 
                 case IPOE_MSG_WAN_CONNECTION_IPV6_DOWN:
-                    IhcDebug("===== IPOE_MSG_WAN_CONNECTION_IPV6_DOWN event received ======");
+                    IhcInfo("===== IPOE_MSG_WAN_CONNECTION_IPV6_DOWN event received ======");
                     /* Reset wan connection data */
                     memset(wanConnectionData.ipv6Address, 0, sizeof(wanConnectionData.ipv6Address));
 
@@ -1419,7 +1419,7 @@ int ihc_echo_handler(void)
                     {
                         ipv4_echo_time_interval = IHC_DEFAULT_REGULAR_INTERVAL; //Regular Interval 30s
                     }
-                    IhcDebug("Echo packets V4 RX [%u -> 0]", g_echo_V4_failure_count);
+                    IhcInfo("Echo packets V4 RX [%u -> 0]", g_echo_V4_failure_count);
                     g_echo_V4_failure_count = 0;
                 }
             }
@@ -1480,7 +1480,7 @@ int ihc_echo_handler(void)
                     {
                         ipv6_echo_time_interval = IHC_DEFAULT_REGULAR_INTERVAL; //Regular Interval 30s
                     }
-                    IhcDebug("Echo packets V6 RX [%u -> 0]", g_echo_V6_failure_count);
+                    IhcInfo("Echo packets V6 RX [%u -> 0]", g_echo_V6_failure_count);
                     g_echo_V6_failure_count = 0;
                 }
             }
@@ -1499,14 +1499,14 @@ int ihc_echo_handler(void)
                     {
                         if (g_send_V4_echo)
                         {
-                            IhcDebug("[%s:%d] v4 echo reply failure reached threshold", __FUNCTION__, __LINE__);
+                            IhcInfo("[%s:%d] v4 echo reply failure reached threshold", __FUNCTION__, __LINE__);
                             /*...Send RENEW/RELAESE in 'Normal Sequence'... */
                             if( v4_startup_sequence_completed )
                             {
                                 /*...Send RELEASE if wan_v4_release = TRUE (This will be set from Request packets of SKYDHCPC)...*/
                                 if( wan_v4_release ) //RELEASE
                                 {
-                                    IhcDebug("[%s:%d] Sending IPOE_MSG_IHC_ECHO_FAIL_IPV4 failure message to WanManager", __FUNCTION__, __LINE__);
+                                    IhcInfo("[%s:%d] Sending IPOE_MSG_IHC_ECHO_FAIL_IPV4 failure message to WanManager", __FUNCTION__, __LINE__);
                                     if (ihc_broadcastEvent(IPOE_MSG_IHC_ECHO_FAIL_IPV4) != IHC_SUCCESS)
                                     {
                                         IhcError("Sending IPOE_MSG_IHC_ECHO_FAIL_IPV4 failed");
@@ -1514,7 +1514,7 @@ int ihc_echo_handler(void)
                                 }
                                 else  /*...Send RENEW if wan_v4_release = FALSE (This will be set from Request packets of SKYDHCPC)...*/
                                 {
-                                    IhcDebug("[%s:%d] Sending IPOE_MSG_IHC_ECHO_RENEW_IPV4", __FUNCTION__, __LINE__);
+                                    IhcInfo("[%s:%d] Sending IPOE_MSG_IHC_ECHO_RENEW_IPV4", __FUNCTION__, __LINE__);
 
                                     if (ihc_broadcastEvent(IPOE_MSG_IHC_ECHO_RENEW_IPV4) != IHC_SUCCESS)
                                     {
@@ -1544,7 +1544,7 @@ int ihc_echo_handler(void)
                         char wanInterface[IHC_MAX_STRING_LENGTH] = {0};
                         if ((ret = ihc_get_V4_defgateway_wan_interface(wanInterface, sizeof(wanInterface), defaultGatewayV4, sizeof(defaultGatewayV4))) == IHC_SUCCESS)
                         {
-                            IhcDebug("[%s:%d] Sending V4 echo packets interface [%s] defaultGateway [%s]", __FUNCTION__, __LINE__, wanInterface, defaultGatewayV4);
+                            IhcInfo("[%s:%d] Sending V4 echo packets interface [%s] defaultGateway [%s]", __FUNCTION__, __LINE__, wanInterface, defaultGatewayV4);
 
                             char BNGMACAddress[IHC_MAX_STRING_LENGTH] = {0};
                             // if current arp entry has a valid entry , update the global mac array BNGMACAddressV4
@@ -1589,7 +1589,7 @@ int ihc_echo_handler(void)
                         }
                         else
                         {
-                            IhcDebug("ihc_get_V4_defgateway_wan_interface failed %d", ret); /* it can fail in PPP connection */
+                            IhcInfo("ihc_get_V4_defgateway_wan_interface failed %d", ret); /* it can fail in PPP connection */
                         }
                     }
                     echoElapsedTimeV4 = echoTime.tv_sec + echoTime.tv_nsec / NANOSEC2SEC;
@@ -1603,14 +1603,14 @@ int ihc_echo_handler(void)
                     {
                         if (g_send_V6_echo)
                         {
-                            IhcDebug("[%s:%d] v6 echo reply failure reached threshold", __FUNCTION__, __LINE__);
+                            IhcInfo("[%s:%d] v6 echo reply failure reached threshold", __FUNCTION__, __LINE__);
                             /*...Send RENEW/RELAESE in 'Normal Sequence'... */
                             if( v6_startup_sequence_completed )
                             {
                                 /*...Send RELEASE if wan_v6_release = TRUE (This will be set from Request packets of DHCPC6)...*/
                                 if( wan_v6_release ) //RELEASE
                                 {
-                                    IhcDebug("Sending IPOE_MSG_IHC_ECHO_FAIL_IPV6 failure");
+                                    IhcInfo("Sending IPOE_MSG_IHC_ECHO_FAIL_IPV6 failure");
                                     if (ihc_broadcastEvent(IPOE_MSG_IHC_ECHO_FAIL_IPV6) != IHC_SUCCESS)
                                     {
                                         IhcError("Sending IPOE_MSG_IHC_ECHO_FAIL_IPV6 failed");
@@ -1618,7 +1618,7 @@ int ihc_echo_handler(void)
                                 }
                                 else  /*...Send RENEW if wan_v6_release = FALSE (This will be set from Request packets of DHCPC6)...*/
                                 {
-                                    IhcDebug("Sending IPOE_MSG_IHC_ECHO_RENEW_IPV6");
+                                    IhcInfo("Sending IPOE_MSG_IHC_ECHO_RENEW_IPV6");
 
                                     if (ihc_broadcastEvent(IPOE_MSG_IHC_ECHO_RENEW_IPV6) != IHC_SUCCESS)
                                     {
@@ -1647,7 +1647,7 @@ int ihc_echo_handler(void)
                         char wanInterface[IHC_MAX_STRING_LENGTH] = {0};
                         if ((ret = ihc_get_V6_defgateway_wan_interface(wanInterface, sizeof(wanInterface), defaultGatewayV6, sizeof(defaultGatewayV6))) == IHC_SUCCESS)
                         {
-                            IhcDebug("Sending V6 echo packets interface [%s] defaultGateway [%s]", wanInterface, defaultGatewayV6);
+                            IhcInfo("Sending V6 echo packets interface [%s] defaultGateway [%s]", wanInterface, defaultGatewayV6);
                             char BNGMACAddress[IHC_MAX_STRING_LENGTH] = {0};
 
                             //update global mac array if arp cacahe has a new valid mac entry for GW
@@ -1691,7 +1691,7 @@ int ihc_echo_handler(void)
                         }
                         else
                         {
-                            IhcDebug("ihc_get_defgateway_wan_interface V6 failed %d", ret); /* it can fail in PPP connections */
+                            IhcInfo("ihc_get_defgateway_wan_interface V6 failed %d", ret); /* it can fail in PPP connections */
                         }
                     }
 

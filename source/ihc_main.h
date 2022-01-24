@@ -58,8 +58,8 @@ typedef struct ifreq ifreq_t;
         RDK_LOG(RDK_LOG_ERROR, "LOG.RDK.IHC", fmt "\n", ##arg);
 #define IhcNotice(fmt, arg...) \
         RDK_LOG(RDK_LOG_NOTICE, "LOG.RDK.IHC", fmt "\n", ##arg);
-#define IhcDebug(fmt, arg...) \
-        RDK_LOG(RDK_LOG_DEBUG, "LOG.RDK.IHC", fmt "\n", ##arg);
+#define IhcInfo(fmt, arg...) \
+        RDK_LOG(RDK_LOG_INFO, "LOG.RDK.IHC", fmt "\n", ##arg);
 
 /********************** Function declarations **********/
 int ihc_echo_handler(void);

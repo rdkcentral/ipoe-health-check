@@ -1702,6 +1702,11 @@ int ihc_echo_handler(void)
                 }
             }
         }
+        else
+        {
+            /* Avoid busy waiting if wan is down during process start */
+            sleep(1);
+        }
     }
     if (0 <= sysevent_fd)
     {

@@ -103,12 +103,13 @@ int main(int argc, char *argv[])
     IhcInfo("Starting IPoE Health Check for Interface = %s", g_ifName);
     if ((ipcListenFd = nn_socket(AF_SP, NN_PULL)) < 0)
     {
-        IhcError("unable to create nn_socket()");
+        IhcError("Error[%s]:unable to create nn_socket()\n",nn_strerror(nn_errno ()));
         return IHC_FAILURE;
     }
     if ((i = nn_bind(ipcListenFd, IHC_IPC_ADDR)) < 0)
     {
-        IhcError("unable to bind to %s\n", IHC_IPC_ADDR);
+        IhcError("Error[%s]: unable to bind to %s\n", nn_strerror(nn_errno ()), IHC_IPC_ADDR);
+        nn_close(ipcListenFd);
         return IHC_FAILURE;
     }
     

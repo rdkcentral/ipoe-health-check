@@ -196,7 +196,7 @@ static int ihc_get_V6_bng_MAC_address(char *ipAddress, char *MACAddress)
 
     if( strlen(ipAddress) > 0 )
     {
-        snprintf(command, IHC_MAX_STRING_LENGTH, "ip -6 neighbor show | grep %s | awk '{print $5}'", ipAddress);
+        snprintf(command, IHC_MAX_STRING_LENGTH, "ip -6 neighbor show | grep -w %s | awk '{print $5}'", ipAddress);
 
         fp = popen(command, "r");
 

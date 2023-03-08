@@ -1417,8 +1417,7 @@ int ihc_echo_handler(void)
                 perror("IHC ERROR: during select ");
                 return IHC_FAILURE;
             }
-
-            if (FD_ISSET(echo_reply_socket_v4, &r_fds))
+            if ((echo_reply_socket_v4 != IHC_FAILURE) && FD_ISSET(echo_reply_socket_v4, &r_fds))
             {
                 if (recvfrom(echo_reply_socket_v4, recvBuf, sizeof(recvBuf), 0, &srcAddr, &sendsize) < 0)
                 {
@@ -1479,7 +1478,7 @@ int ihc_echo_handler(void)
                 }
             }
 
-            if (FD_ISSET(echo_reply_socket_v6, &r_fds))
+            if ((echo_reply_socket_v6 != IHC_FAILURE) && FD_ISSET(echo_reply_socket_v6, &r_fds))
             {
                 if (recvfrom(echo_reply_socket_v6, recvBuf, sizeof(recvBuf), 0, &srcAddr, &sendsize) < 0)
                 {

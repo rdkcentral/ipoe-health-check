@@ -1204,6 +1204,95 @@ static int ihc_create_echo_reply_socket_v4()
     IhcInfo("[%s:%d] Created ECHO Reply V4 socket : %d",__FUNCTION__, __LINE__, echo_reply_socket_v4);
     return echo_reply_socket_v4;
 }
+
+
+static int ihc_resolve_fqdn(char * fqdn)
+{
+    if (fqdn == NULL || strlen(fqdn) <= 0)
+    {
+        IhcInfo("%s %d: No FQDN provided. So cannot check resolution\n", __FUNCTION__, __LINE__);
+        return IHC_FAILURE;
+    }
+
+    char ip[64]={0};
+    struct addrinfo hints, *result, *rp;
+    memset(&hints, '\0', sizeof(hints));
+
+    int error = getaddrinfo(fqdn, NULL, &hints, &result);
+
+    if (error != 0)
+    {
+        IhcError("%s %d: unable to resolve FQDN:%s\n", __FUNCTION__, __LINE__, fqdn);
+        return IHC_FAILURE;
+    }
+
+    for (rp = result; rp != NULL; rp = rp->ai_next) 
+    {
+        inet_ntop(AF_INET, &rp->ai_addr->sa_data[1], (char *)&ip, sizeof(ip));
+        IhcInfo("IP address: %s\n\n", ip);
+        inet_ntop(AF_INET, &rp->ai_addr->sa_data[2], (char *)&ip, sizeof(ip));
+        IhcInfo("IP address2: %s\n\n", ip);
+    }
+
+    return IHC_SUCCESS;
+
+}
+
+static int ihc_get_fqdn_for_dns_lookup (char * fqdn, int size)
+{
+    if (fqdn == NULL || size <= 0)
+    {
+        IhcInfo("%s %d: invalid args\n", __FUNCTION__, __LINE__);
+        return IHC_FAILURE;
+    }
+
+    int ret = IHC_FAILURE ;
+    FILE * fp = NULL;
+    memset (fqdn, 0, size);
+
+    fp = fopen(IHC_CONFIG_FILE, "r");
+
+    if (fp == NULL)
+    {
+        IhcInfo("%s %d: Unable to to open %s\n", __FUNCTION__, __LINE__, IHC_CONFIG_FILE);
+        return ret;
+    }
+
+    ssize_t nread;
+    char * key = "fqdn";
+    size_t len = 0;
+    char *line = NULL;
+    char *c = NULL;
+    char *val = NULL;
+
+    while ((nread = getline(&line, &len, fp)) != -1)
+    {
+        c = strstr(line, key);
+        if (c == NULL)
+        {
+            continue;
+        }
+        val = c + strlen(key) + 1;
+        strncpy(fqdn, val, size - 1);
+        if (fqdn[strlen(fqdn) - 1] == '\n')
+        {
+            fqdn[strlen(fqdn) - 1] = 0;
+        }
+        ret = IHC_SUCCESS;
+        IhcInfo("%s %d: FQDN:%s\n",__FUNCTION__, __LINE__, fqdn);
+        break;
+    }
+
+    if (line)
+    {
+        free(line);
+    }
+    fclose (fp);
+
+    return ret;
+
+}
+
 /**
  * @brief handle messages and IHC echo packets
  * 
@@ -1236,6 +1325,9 @@ int ihc_echo_handler(void)
     ipc_ihc_data_t msgBody;
 
     msgSize = sizeof(ipc_ihc_data_t);
+
+    char fqdn[128] = {0};
+    ihc_get_fqdn_for_dns_lookup(fqdn, sizeof(fqdn));
 
     // init wan connection data
     memset(&wanConnectionData, 0, msgSize);
@@ -1525,7 +1617,32 @@ int ihc_echo_handler(void)
                             }
                             else  /*...IPOE v4 check goes to IDLE after 3 continuous Failre echo in 'Startup Sequence'... */
                             {
-                                IhcError("IHC_V4_IDLE :: IHC: IPOE health check(IPv4) IDLE");
+                                if (ihc_resolve_fqdn(fqdn) != IHC_SUCCESS)
+                                {
+                                    IhcError("%s %d: FQDN resolution failed\n", __FUNCTION__, __LINE__);
+                                    /*...Send RELEASE if wan_v4_release = TRUE (This will be set from Request packet)...*/
+                                    if( wan_v4_release ) //RELEASE
+                                    {
+                                        IhcInfo("[%s:%d] Sending IPOE_MSG_IHC_ECHO_FAIL_IPV4 failure message to WanManager", __FUNCTION__, __LINE__);
+                                        if (ihc_broadcastEvent(IPOE_MSG_IHC_ECHO_FAIL_IPV4) != IHC_SUCCESS)
+                                        {
+                                            IhcError("Sending IPOE_MSG_IHC_ECHO_FAIL_IPV4 failed");
+                                        }
+                                    }
+                                    else  /*...Send RENEW if wan_v4_release = FALSE (This will be set from Request packet)...*/
+                                    {
+                                        IhcInfo("[%s:%d] Sending IPOE_MSG_IHC_ECHO_RENEW_IPV4", __FUNCTION__, __LINE__);
+
+                                        if (ihc_broadcastEvent(IPOE_MSG_IHC_ECHO_RENEW_IPV4) != IHC_SUCCESS)
+                                        {
+                                            IhcError("Sending IPOE_MSG_IHC_ECHO_FAIL_IPV4 failed");
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    IhcError("IHC_V4_IDLE :: IHC: IPOE health check(IPv4) IDLE");
+                                }
                             }
                             ihc_stop_echo_packets(IHC_ECHO_TYPE_V4);
                             ipv4_echo_time_interval = IHC_DEFAULT_RETRY_INTERVAL;
@@ -1629,7 +1746,32 @@ int ihc_echo_handler(void)
                             }
                             else  /*...IPOE v6 check goes to IDLE after 3 continuous Failre echo in 'Startup Sequence'... */
                             {
-                                IhcError("IHC_V6_IDLE :: IHC: IPOE health check(IPv6) IDLE");
+                                if (ihc_resolve_fqdn(fqdn) != IHC_SUCCESS)
+                                {
+                                    IhcError("%s %d: FQDN resolution failed\n", __FUNCTION__, __LINE__);
+                                    /*...Send RELEASE if wan_v6_release = TRUE (This will be set from Request packets)...*/
+                                    if( wan_v6_release ) //RELEASE
+                                    {
+                                        IhcInfo("[%s:%d] Sending IPOE_MSG_IHC_ECHO_FAIL_IPV6 failure message to WanManager", __FUNCTION__, __LINE__);
+                                        if (ihc_broadcastEvent(IPOE_MSG_IHC_ECHO_FAIL_IPV6) != IHC_SUCCESS)
+                                        {
+                                            IhcError("Sending IPOE_MSG_IHC_ECHO_FAIL_IPV6 failed");
+                                        }
+                                    }
+                                    else  /*...Send RENEW if wan_v6_release = FALSE (This will be set from Request packets)...*/
+                                    {
+                                        IhcInfo("[%s:%d] Sending IPOE_MSG_IHC_ECHO_RENEW_IPV6", __FUNCTION__, __LINE__);
+
+                                        if (ihc_broadcastEvent(IPOE_MSG_IHC_ECHO_RENEW_IPV6) != IHC_SUCCESS)
+                                        {
+                                            IhcError("Sending IPOE_MSG_IHC_ECHO_FAIL_IPV6 failed");
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    IhcError("IHC_V6_IDLE :: IHC: IPOE health check(IPv6) IDLE");
+                                }
                             }
                             ihc_stop_echo_packets(IHC_ECHO_TYPE_V6);
                             ipv6_echo_time_interval = IHC_DEFAULT_RETRY_INTERVAL;

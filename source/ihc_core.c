@@ -1206,11 +1206,11 @@ static int ihc_create_echo_reply_socket_v4()
 }
 
 
-static int ihc_resolve_fqdn(char * fqdn)
+static int ihc_resolve_domain_name(char * domainName)
 {
-    if (fqdn == NULL || strlen(fqdn) <= 0)
+    if (domainName == NULL || strlen(domainName) <= 0)
     {
-        IhcInfo("%s %d: No FQDN provided. So cannot check resolution\n", __FUNCTION__, __LINE__);
+        IhcInfo("%s %d: No domainName provided. So cannot check resolution\n", __FUNCTION__, __LINE__);
         return IHC_FAILURE;
     }
 
@@ -1218,11 +1218,11 @@ static int ihc_resolve_fqdn(char * fqdn)
     struct addrinfo hints, *result, *rp;
     memset(&hints, '\0', sizeof(hints));
 
-    int error = getaddrinfo(fqdn, NULL, &hints, &result);
+    int error = getaddrinfo(domainName, NULL, &hints, &result);
 
     if (error != 0)
     {
-        IhcError("%s %d: unable to resolve FQDN:%s\n", __FUNCTION__, __LINE__, fqdn);
+        IhcError("%s %d: unable to resolve Domain Name:%s\n", __FUNCTION__, __LINE__, domainName);
         return IHC_FAILURE;
     }
 
@@ -1238,59 +1238,21 @@ static int ihc_resolve_fqdn(char * fqdn)
 
 }
 
-static int ihc_get_fqdn_for_dns_lookup (char * fqdn, int size)
+static int ihc_domain_name_update(char *msg_domainName, char *domainName, int size)
 {
-    if (fqdn == NULL || size <= 0)
+    if (domainName == NULL || msg_domainName == NULL ||  size <= 0)
     {
         IhcInfo("%s %d: invalid args\n", __FUNCTION__, __LINE__);
         return IHC_FAILURE;
     }
 
-    int ret = IHC_FAILURE ;
-    FILE * fp = NULL;
-    memset (fqdn, 0, size);
-
-    fp = fopen(IHC_CONFIG_FILE, "r");
-
-    if (fp == NULL)
+    if((msg_domainName[0] != '\0') && (strcmp(msg_domainName, domainName) != 0))
     {
-        IhcInfo("%s %d: Unable to to open %s\n", __FUNCTION__, __LINE__, IHC_CONFIG_FILE);
-        return ret;
+        snprintf(domainName, size, "%s", msg_domainName);
+        IhcInfo("%s %d: Domain Name update success = [%s]\n", __FUNCTION__, __LINE__, domainName);
     }
 
-    ssize_t nread;
-    char * key = "fqdn";
-    size_t len = 0;
-    char *line = NULL;
-    char *c = NULL;
-    char *val = NULL;
-
-    while ((nread = getline(&line, &len, fp)) != -1)
-    {
-        c = strstr(line, key);
-        if (c == NULL)
-        {
-            continue;
-        }
-        val = c + strlen(key) + 1;
-        strncpy(fqdn, val, size - 1);
-        if (fqdn[strlen(fqdn) - 1] == '\n')
-        {
-            fqdn[strlen(fqdn) - 1] = 0;
-        }
-        ret = IHC_SUCCESS;
-        IhcInfo("%s %d: FQDN:%s\n",__FUNCTION__, __LINE__, fqdn);
-        break;
-    }
-
-    if (line)
-    {
-        free(line);
-    }
-    fclose (fp);
-
-    return ret;
-
+    return IHC_SUCCESS;
 }
 
 /**
@@ -1326,8 +1288,7 @@ int ihc_echo_handler(void)
 
     msgSize = sizeof(ipc_ihc_data_t);
 
-    char fqdn[128] = {0};
-    ihc_get_fqdn_for_dns_lookup(fqdn, sizeof(fqdn));
+    char domainName[128] = {0};
 
     // init wan connection data
     memset(&wanConnectionData, 0, msgSize);
@@ -1349,6 +1310,7 @@ int ihc_echo_handler(void)
                     /* Store wan connection data */
                     strncpy(wanConnectionData.ifName, msgBody.ifName, sizeof(wanConnectionData.ifName));
                     strncpy(wanConnectionData.ipv4Address, msgBody.ipv4Address, sizeof(wanConnectionData.ipv4Address));
+                    ihc_domain_name_update(msgBody.domainName, domainName, sizeof(domainName));
 
                     /* Start V4 IHC echo packet transmission */
 
@@ -1384,6 +1346,7 @@ int ihc_echo_handler(void)
                     /* Store wan connection data */
                     strncpy(wanConnectionData.ifName, msgBody.ifName, sizeof(wanConnectionData.ifName));
                     strncpy(wanConnectionData.ipv6Address, msgBody.ipv6Address, sizeof(wanConnectionData.ipv6Address));
+                    ihc_domain_name_update(msgBody.domainName, domainName, sizeof(domainName));
 
                     /* Start V6 IHC echo packet transmission */
 
@@ -1617,9 +1580,9 @@ int ihc_echo_handler(void)
                             }
                             else  /*...IPOE v4 check goes to IDLE after 3 continuous Failre echo in 'Startup Sequence'... */
                             {
-                                if (ihc_resolve_fqdn(fqdn) != IHC_SUCCESS)
+                                if (ihc_resolve_domain_name(domainName) != IHC_SUCCESS)
                                 {
-                                    IhcError("%s %d: FQDN resolution failed\n", __FUNCTION__, __LINE__);
+                                    IhcError("%s %d:  Domain Nameresolution failed\n", __FUNCTION__, __LINE__);
                                     /*...Send RELEASE if wan_v4_release = TRUE (This will be set from Request packet)...*/
                                     if( wan_v4_release ) //RELEASE
                                     {
@@ -1746,9 +1709,9 @@ int ihc_echo_handler(void)
                             }
                             else  /*...IPOE v6 check goes to IDLE after 3 continuous Failre echo in 'Startup Sequence'... */
                             {
-                                if (ihc_resolve_fqdn(fqdn) != IHC_SUCCESS)
+                                if (ihc_resolve_domain_name(domainName) != IHC_SUCCESS)
                                 {
-                                    IhcError("%s %d: FQDN resolution failed\n", __FUNCTION__, __LINE__);
+                                    IhcError("%s %d: Domain Name resolution failed\n", __FUNCTION__, __LINE__);
                                     /*...Send RELEASE if wan_v6_release = TRUE (This will be set from Request packets)...*/
                                     if( wan_v6_release ) //RELEASE
                                     {

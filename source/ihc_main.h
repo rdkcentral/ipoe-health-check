@@ -61,7 +61,6 @@ typedef struct ifreq ifreq_t;
 #define IhcInfo(fmt, arg...) \
         RDK_LOG(RDK_LOG_INFO, "LOG.RDK.IHC", fmt "\n", ##arg);
 
-#define IHC_CONFIG_FILE "/usr/bin/ihc/ipoe_health_check.conf"
 
 /********************** Function declarations **********/
 int ihc_echo_handler(void);

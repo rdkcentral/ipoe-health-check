@@ -181,14 +181,14 @@ static int ihc_get_ipv6_global_address(char *globalAddress, size_t globalAddress
  * @param MACAddress  BNG mac address
  * @return int IHC_SUCCESS on success / IHC_FAILURE on failure
  */
-static int ihc_get_V6_bng_MAC_address(char *ipAddress, char *MACAddress)
+static int ihc_get_V6_bng_MAC_address(char *ipAddress, char *MACAddress, unsigned int len)
 {
     char command[IHC_MAX_STRING_LENGTH] = {0};
     char line[IHC_MAX_STRING_LENGTH] = {0};
     FILE *fp;
     int ret = IHC_FAILURE;
 
-    if (ipAddress == NULL || MACAddress == NULL)
+    if (ipAddress == NULL || MACAddress == NULL || len == 0)
     {
         IhcError("[%s %d]Ivalid args\n", __FUNCTION__, __LINE__);
         return IHC_FAILURE;
@@ -210,7 +210,7 @@ static int ihc_get_V6_bng_MAC_address(char *ipAddress, char *MACAddress)
                 {
                     char tmpString[IHC_MAX_STRING_LENGTH] = {0};
                     snprintf(tmpString, IHC_MAX_STRING_LENGTH, "0x%s:", token);
-                    strcat(MACAddress, tmpString);
+                    strncat(MACAddress, tmpString, len - strlen(MACAddress) - 1);
                     token = strtok(NULL, ":");
                 }
 
@@ -235,14 +235,14 @@ static int ihc_get_V6_bng_MAC_address(char *ipAddress, char *MACAddress)
  * @param MACAddress  BNG mac address
  * @return int IHC_SUCCESS on success / IHC_FAILURE on failure
  */
-static int ihc_get_V4_bng_MAC_address(char *ipAddress, char *MACAddress)
+static int ihc_get_V4_bng_MAC_address(char *ipAddress, char *MACAddress, unsigned int len)
 {
     char command[IHC_MAX_STRING_LENGTH] = {0};
     char line[IHC_MAX_STRING_LENGTH] = {0};
     FILE *fp;
     int ret = IHC_FAILURE;
 
-    if (ipAddress == NULL || MACAddress == NULL)
+    if (ipAddress == NULL || MACAddress == NULL || len == 0)
     {
         IhcError("[%s: %d] Invalid args..", __FUNCTION__, __LINE__);
         return IHC_FAILURE;
@@ -265,7 +265,7 @@ static int ihc_get_V4_bng_MAC_address(char *ipAddress, char *MACAddress)
                 {
                     char tmpString[IHC_MAX_STRING_LENGTH] = {0};
                     snprintf(tmpString, IHC_MAX_STRING_LENGTH, "0x%s:", token);
-                    strcat(MACAddress, tmpString);
+                    strncat(MACAddress, tmpString, len - strlen(MACAddress) - 1);
                     token = strtok(NULL, ":");
                 }
                 
@@ -545,7 +545,7 @@ static int ihc_broadcastEvent(int message)
     ipc_ihc_data_t msgBody;
     memset (&msgBody, 0, sizeof(ipc_ihc_data_t));
     msgBody.msgType = message;
-    strncpy(msgBody.ifName, g_ifName, IFNAME_LENGTH);
+    strncpy(msgBody.ifName, g_ifName, IFNAME_LENGTH - 1);
 
     // Preparing msg header and adding payload
     ipc_msg_payload_t msg;
@@ -814,7 +814,7 @@ static int ihc_sendV6EchoPackets(char *interface, char *MACaddress)
         return IHC_FAILURE;
     }
     IhcInfo ("[%s :%d] V6 IP %s",__FUNCTION__, __LINE__, globalAddress);
-    strcpy(src_ip, globalAddress);
+    strncpy(src_ip, globalAddress, sizeof(src_ip) - 1);
 
     device.sll_family = AF_PACKET;
     memcpy(device.sll_addr, src_mac, IHC_MACADDR_LEN);
@@ -1628,7 +1628,7 @@ int ihc_echo_handler(void)
 
                             char BNGMACAddress[IHC_MAX_STRING_LENGTH] = {0};
                             // if current arp entry has a valid entry , update the global mac array BNGMACAddressV4
-                            if (ihc_get_V4_bng_MAC_address(defaultGatewayV4, BNGMACAddress) == IHC_SUCCESS)
+                            if (ihc_get_V4_bng_MAC_address(defaultGatewayV4, BNGMACAddress , sizeof(BNGMACAddress)) == IHC_SUCCESS)
                             {
                                 // update the global mac cache array if this is a new mac from arp cache
                                 if( strncasecmp(BNGMACAddressV4,BNGMACAddress, strlen(BNGMACAddress)) != 0) 
@@ -1756,7 +1756,7 @@ int ihc_echo_handler(void)
                             char BNGMACAddress[IHC_MAX_STRING_LENGTH] = {0};
 
                             //update global mac array if arp cacahe has a new valid mac entry for GW
-                            if (ihc_get_V6_bng_MAC_address(defaultGatewayV6, BNGMACAddress) == IHC_SUCCESS)
+                            if (ihc_get_V6_bng_MAC_address(defaultGatewayV6, BNGMACAddress, sizeof(BNGMACAddress)) == IHC_SUCCESS)
                             {
                                 if( strncasecmp(BNGMACAddressV6, BNGMACAddress, strlen(BNGMACAddress)) ) 
                                 {

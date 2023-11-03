@@ -98,7 +98,7 @@ int main(int argc, char *argv[])
     }
 
     memset (g_ifName, IFNAME_LENGTH, 0);
-    strncpy(g_ifName, ifName, IFNAME_LENGTH);
+    strncpy(g_ifName, ifName, IFNAME_LENGTH - 1);
 
     IhcInfo("Starting IPoE Health Check for Interface = %s", g_ifName);
     if ((ipcListenFd = nn_socket(AF_SP, NN_PULL)) < 0)

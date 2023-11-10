@@ -1660,11 +1660,11 @@ int ihc_echo_handler(void)
                                     IhcError("ihc_sendV4EchoPackets failed %s", strerror(errno));
                                     g_echo_V4_failure_count++;
                                 }
+                                echoElapsedTimeV4 = echoTime.tv_sec + echoTime.tv_nsec / NANOSEC2SEC;
                             }
                             else
                             {
-                                IhcError("ihc_sendV4EchoPackets invalid BNGMAC[%s]", BNGMACAddressV4);
-                                g_echo_V4_failure_count++;
+                                IhcNotice("ihc_sendV4EchoPackets invalid BNGMAC[%s]", BNGMACAddressV4);
                             }
                         }
                         else
@@ -1672,7 +1672,6 @@ int ihc_echo_handler(void)
                             IhcInfo("ihc_get_V4_defgateway_wan_interface failed %d", ret); /* it can fail in PPP connection */
                         }
                     }
-                    echoElapsedTimeV4 = echoTime.tv_sec + echoTime.tv_nsec / NANOSEC2SEC;
                 }
 
                 delta = (echoTime.tv_sec + (echoTime.tv_nsec / NANOSEC2SEC)) - echoElapsedTimeV6;
@@ -1787,22 +1786,21 @@ int ihc_echo_handler(void)
                                     IhcError("ihc_sendV6EchoPackets failed %s", strerror(errno));
                                     g_echo_V6_failure_count++;
                                 }
+
+                                if (!clock_gettime(CLOCK_MONOTONIC, &echoTime))
+                                {
+                                    echoElapsedTimeV6 = echoTime.tv_sec + echoTime.tv_nsec / NANOSEC2SEC;
+                                }
                             }
                             else
                             {
-                                IhcError("ihc_sendV6EchoPackets invalid BNGMAC[%s]",BNGMACAddressV6);
-                                g_echo_V6_failure_count++;
+                                IhcNotice("ihc_sendV6EchoPackets invalid BNGMAC[%s]",BNGMACAddressV6);
                             }
                         }
                         else
                         {
                             IhcInfo("ihc_get_defgateway_wan_interface V6 failed %d", ret); /* it can fail in PPP connections */
                         }
-                    }
-
-                    if (!clock_gettime(CLOCK_MONOTONIC, &echoTime))
-                    {
-                        echoElapsedTimeV6 = echoTime.tv_sec + echoTime.tv_nsec / NANOSEC2SEC;
                     }
                 }
             }

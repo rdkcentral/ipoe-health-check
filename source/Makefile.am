@@ -21,6 +21,6 @@
 
 bin_PROGRAMS = ipoe_health_check
 
-ipoe_health_check_CFLAGS = -DFEATURE_SUPPORT_RDKLOG $(DBUS_CFLAGS) $(SYSTEMD_CFLAGS)
+ipoe_health_check_CFLAGS = -DFEATURE_SUPPORT_RDKLOG $(SYSTEMD_CFLAGS)
 ipoe_health_check_SOURCES = ihc_core.c ihc_main.c
 ipoe_health_check_LDFLAGS = -lccsp_common -lrdkloggers -lnanomsg -lsysevent

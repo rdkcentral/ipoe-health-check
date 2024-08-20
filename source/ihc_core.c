@@ -18,8 +18,10 @@
  */
 
 /**************** System header files ***************************/
+#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <netinet/in.h>
 #include <netinet/ip6.h>
 #include <sys/socket.h>
@@ -124,6 +126,29 @@ static int validateMacAddr(const char * mac)
          ret = IHC_SUCCESS;
     }
     return ret;
+}
+
+static int _write_sysctl_file(const char *filename, int value)
+{
+    char buf[12];
+    size_t len;
+    int fd;
+
+    if ((fd = open(filename, O_WRONLY)) < 0) {
+        perror("Failed to open file");
+        return -1;
+    }
+
+    len = sprintf(buf, "%d", value);
+    if (write(fd, buf, len) != (ssize_t) len) {
+        perror("Failed to write to file");
+        close(fd);
+        return -1;
+    }
+
+    close(fd);
+
+    return 0;
 }
 
 /**
@@ -440,8 +465,7 @@ static int ihc_start_echo_packets(eIHCEchoType echoType)
         case IHC_ECHO_TYPE_V4:
             if (g_send_V4_echo == 0)
             {
-                snprintf(cmd, sizeof(cmd), "%s", "echo 1 > /proc/sys/net/ipv4/conf/all/accept_local");
-                system(cmd);
+                _write_sysctl_file("/proc/sys/net/ipv4/conf/all/accept_local", 1);
 
                 // Sending ping packet to BNG to resolve ARP,
                 // sometimes MAC address of BNG is not resolved so triggering ARP resolution - happens only once
@@ -484,14 +508,12 @@ static int ihc_start_echo_packets(eIHCEchoType echoType)
 
 static int ihc_stop_echo_packets(eIHCEchoType echoType)
 {
-    char cmd[IHC_MAX_STRING_LENGTH] = {0};
     int ret = IHC_SUCCESS;
 
     switch (echoType)
     {
     case IHC_ECHO_TYPE_V4:
-        snprintf(cmd, sizeof(cmd), "%s", "echo 0 > /proc/sys/net/ipv4/conf/all/accept_local");
-        system(cmd);
+        _write_sysctl_file("/proc/sys/net/ipv4/conf/all/accept_local", 0);
         g_send_V4_echo = 0;
         g_v4_connection = FALSE;
         g_echo_V4_failure_count = 0;

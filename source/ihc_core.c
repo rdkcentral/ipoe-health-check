@@ -117,7 +117,7 @@ static int validateMacAddr(const char * mac)
     // mac address format(0xHH:0xHH:0xHH:0xHH:0xHH:0xHH)
     if( NULL == mac || strlen(mac) != IHC_MACADDR_STR_LEN )
     {
-         IhcError("[%s:%d] Invalid args mac[%s]", __FUNCTION__, __LINE__,(NULL == mac)?"NULL":mac);
+         IhcError("[%s:%d] Invalid args mac[%s], mac len=%d ", __FUNCTION__, __LINE__,(NULL == mac)?"NULL":mac, strlen(mac));
          return ret;
     }
     if( IHC_MACADDR_LEN == sscanf(mac, "%04X:%04X:%04X:%04X:%04X:%04X",
@@ -239,6 +239,7 @@ static int ihc_get_V6_bng_MAC_address(char *ipAddress, char *MACAddress, unsigne
                     token = strtok(NULL, ":");
                 }
 
+                IhcInfo("[%s:%d] MACAddress=%s, MAC Len=%d ",__FUNCTION__, __LINE__, MACAddress, strlen(MACAddress));
                 if (strlen(MACAddress) > 0 && strstr(MACAddress, ":" ))
                 {
                     MACAddress[strlen(MACAddress) - IHC_STRIP_LAST_CHAR_INDEX] = '\0'; //strip of last "\n:"
@@ -293,7 +294,8 @@ static int ihc_get_V4_bng_MAC_address(char *ipAddress, char *MACAddress, unsigne
                     strncat(MACAddress, tmpString, len - strlen(MACAddress) - 1);
                     token = strtok(NULL, ":");
                 }
-                
+
+                IhcInfo("[%s:%d] MACAddress=%s, MAC Len=%d ",__FUNCTION__, __LINE__, MACAddress, strlen(MACAddress));
                 if (strlen(MACAddress) > 0 && strstr(MACAddress, ":"))
                 {
                     MACAddress[strlen(MACAddress) - IHC_STRIP_LAST_CHAR_INDEX] = '\0'; //strip of last "\n:"
@@ -1657,6 +1659,10 @@ int ihc_echo_handler(void)
                                     strncpy(BNGMACAddressV4, BNGMACAddress, IHC_MAX_STRING_LENGTH); //Cache BNG MAC address
                                 }
                             }
+                            else
+                            {
+                                IhcError("%s-%d: Sending v4 Echo packet for Interface (%s) failed to get MAC (%s)", __FUNCTION__, __LINE__, wanInterface, BNGMACAddress);
+                            }
                             /* There are different reasons for a lost mac in arp cache. ipoe session should always be active
                             irrespective of arp cache entry. So send the packet using the current GW mac kept in mac array
                             */
@@ -1782,6 +1788,10 @@ int ihc_echo_handler(void)
                                 {
                                     strncpy(BNGMACAddressV6, BNGMACAddress, IHC_MAX_STRING_LENGTH); 
                                 }
+                            }
+                            else
+                            {
+                                IhcError("%s-%d: Sending v6 Echo packet for Interface (%s) failed to get MAC (%s)", __FUNCTION__, __LINE__, wanInterface, BNGMACAddress);
                             }
                             /* There are different reasons for a lost mac in arp cache. ipoe session should always be active
                             irrespective of arp cache entry. So send the packet using the current GW mac kept in mac array

@@ -65,6 +65,7 @@ int main(int argc, char *argv[])
     /* Initialize RDK Logger. */
     LOGInit();
 #endif //FEATURE_SUPPORT_RDKLOG
+    IhcInfo("Version : %s \n",GIT_VERSION );
 
     while ((c = getopt (argc, argv, "i:")) != -1)
         switch (c)

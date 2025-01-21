@@ -263,8 +263,6 @@ static int ihc_get_V6_bng_MAC_address(char *ipAddress, char *MACAddress, unsigne
  */
 static int ihc_get_V4_bng_MAC_address(char *ipAddress, char *MACAddress, unsigned int len)
 {
-    char command[IHC_MAX_STRING_LENGTH] = {0};
-    char line[IHC_MAX_STRING_LENGTH] = {0};
     FILE *fp;
     int ret = IHC_FAILURE;
 
@@ -276,13 +274,16 @@ static int ihc_get_V4_bng_MAC_address(char *ipAddress, char *MACAddress, unsigne
 
     if( strlen(ipAddress) > 0 )
     {
-        memset(command, 0, IHC_MAX_STRING_LENGTH);
+        char command[IHC_MAX_STRING_LENGTH];
+
         snprintf(command, IHC_MAX_STRING_LENGTH, "arp -an| grep %s | awk '{print $4}'", ipAddress);
 
         fp = popen(command, "r");
 
         if (fp)
         {
+            char line[IHC_MAX_STRING_LENGTH];
+
             if (fgets(line, sizeof(line), fp) != NULL)
             {
                 //Convert into proper format
@@ -459,7 +460,6 @@ static int ihc_get_V4_defgateway_wan_interface(char *interface, size_t interface
 
 static int ihc_start_echo_packets(eIHCEchoType echoType)
 {
-    char cmd[IHC_MAX_STRING_LENGTH] = {0};
     int ret = IHC_SUCCESS;
 
     switch (echoType)
@@ -467,11 +467,12 @@ static int ihc_start_echo_packets(eIHCEchoType echoType)
         case IHC_ECHO_TYPE_V4:
             if (g_send_V4_echo == 0)
             {
+                char cmd[IHC_MAX_STRING_LENGTH];
+
                 _write_sysctl_file("/proc/sys/net/ipv4/conf/all/accept_local", 1);
 
                 // Sending ping packet to BNG to resolve ARP,
                 // sometimes MAC address of BNG is not resolved so triggering ARP resolution - happens only once
-                memset(cmd, 0, IHC_MAX_STRING_LENGTH);
                 snprintf(cmd, IHC_MAX_STRING_LENGTH, "ping -c 1 %s", wanConnectionData.ipv4Address);
                 system(cmd);
 

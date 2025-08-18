@@ -681,7 +681,7 @@ static uint16_t calculate_udp6_checksum(struct ip6_hdr ipv6_header, struct udphd
 {
     if (payload == NULL)
     {
-        fprintf(stderr, "[%s %d] Invalid arguments...\n", __FUNCTION__, __LINE__);
+	IhcError("[%s %d] Invalid args...", __FUNCTION__, __LINE__);
         return 0;
     }
     char packet_buffer[IP_MAXPACKET];

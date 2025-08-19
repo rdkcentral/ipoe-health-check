@@ -1598,7 +1598,11 @@ int ihc_echo_handler(void)
                                 }
                                 else
                                 {
-                                    IhcError("IHC_V4_IDLE :: IHC: IPOE health check(IPv4) IDLE");
+                                    IhcInfo("[%s:%d] Sending IPOE_MSG_IHC_ECHO_IPV4_IDLE", __FUNCTION__, __LINE__);
+				    if (ihc_broadcastEvent(IPOE_MSG_IHC_ECHO_IPV4_IDLE) != IHC_SUCCESS)
+                                    {
+			                IhcError("IHC_V4_IDLE :: IHC: IPOE health check(IPv4) IDLE");
+				    }				    
                                 }
                             }
                             ihc_stop_echo_packets(IHC_ECHO_TYPE_V4);
@@ -1730,7 +1734,11 @@ int ihc_echo_handler(void)
                                 }
                                 else
                                 {
-                                    IhcError("IHC_V6_IDLE :: IHC: IPOE health check(IPv6) IDLE");
+                                    IhcInfo("[%s:%d] Sending IPOE_MSG_IHC_ECHO_IPV6_IDLE", __FUNCTION__, __LINE__);
+                                    if (ihc_broadcastEvent(IPOE_MSG_IHC_ECHO_IPV6_IDLE) != IHC_SUCCESS)
+                                    {
+                                        IhcError("IHC_V6_IDLE :: IHC: IPOE health check(IPv6) IDLE");
+                                    }					
                                 }
                             }
                             ihc_stop_echo_packets(IHC_ECHO_TYPE_V6);

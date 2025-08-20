@@ -859,7 +859,7 @@ static int ihc_sendV6EchoPackets(char *interface, char *MACaddress)
     udphdr.len = htons(IHC_UDP_HDRLEN + datalen);
 
     // UDP checksum (16 bits)
-    if ((udphdr.check = udp6_checksum(iphdr, udphdr, data, datalen)) == 0)
+    if ((udphdr.check = calculate_udp6_checksum(iphdr, udphdr, data, datalen)) == 0)
     {
         IhcError("[%s %d] unable to generate checksum", __FUNCTION__, __LINE__);
         return IHC_FAILURE;

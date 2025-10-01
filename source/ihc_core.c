@@ -922,6 +922,12 @@ static int ihc_sendV6EchoPackets(char *interface, char *MACaddress)
     // UDP data
     memcpy(ether_frame + IHC_ETH_HDRLEN + IHC_IP6_HDRLEN + IHC_UDP_HDRLEN, data, datalen);
 
+    IhcInfo ("[%s :%d] KAVYA  frame_length = [%d]\n",__FUNCTION__, __LINE__,frame_length);
+    int i=0;
+    for(i=0,i<IHC_MAX_STRING_LENGTH;i++)
+    {
+        IhcInfo ("[%s :%d] KAVYA ether_frame[%d] = %hhu\n",__FUNCTION__, __LINE__,i, ether_frame[i]);
+    }
     // Submit request for a raw socket descriptor.
     if ((sockV6 = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) < 0)
     {

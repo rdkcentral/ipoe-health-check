@@ -924,7 +924,7 @@ static int ihc_sendV6EchoPackets(char *interface, char *MACaddress)
 
     IhcInfo ("[%s :%d] KAVYA  frame_length = [%d]\n",__FUNCTION__, __LINE__,frame_length);
     int i=0;
-    for(i=0,i<IHC_MAX_STRING_LENGTH;i++)
+    for(i=0;i<IHC_MAX_STRING_LENGTH;i++)
     {
         IhcInfo ("[%s :%d] KAVYA ether_frame[%d] = %hhu\n",__FUNCTION__, __LINE__,i, ether_frame[i]);
     }

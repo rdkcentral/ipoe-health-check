@@ -878,7 +878,7 @@ static int ihc_sendV6EchoPackets(char *interface, char *MACaddress)
 	    IhcInfo ("[%s :%d] KAVYA ENTER ..",__FUNCTION__, __LINE__);
     int status = 0;
     int datalen = 0;
-    int frame_length = 0;payload
+    int frame_length = 0;
     int bytes = 0;
     struct ip6_hdr iphdr;
     struct udphdr udphdr;

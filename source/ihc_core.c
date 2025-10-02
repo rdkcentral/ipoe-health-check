@@ -1058,7 +1058,6 @@ for(i=IHC_ETH_HDRLEN + IHC_IP6_HDRLEN+IHC_UDP_HDRLEN ; i< IHC_ETH_HDRLEN + IHC_I
 	IhcInfo ("[%d] = [%hhu]",ether_frame[i]);
 }
     IhcInfo ("[%s :%d] KAVYA  frame_length = [%d] datalen = [%d]",__FUNCTION__, __LINE__,frame_length,datalen);
-    IhcInfo ("[%s :%d] KAVYA ether_frame = ",__FUNCTION__, __LINE__);
 /*    int i;
     for(i=0;i<frame_length;i++)
     {
@@ -1127,7 +1126,8 @@ IhcInfo ("[%s :%d] KAVYA Calling udp6_checksum..\n",__FUNCTION__, __LINE__);
     // http://www.iana.org/assignments/ethernet-numbers
     ether_frame[12] = ETH_P_IPV6 / 256;
     ether_frame[13] = ETH_P_IPV6 % 256;
-
+IhcInfo ("[12] = [%hhu]",ether_frame[12]);
+IhcInfo ("[13] = [%hhu]",ether_frame[13]);
     // Next is ethernet frame data (IPv6 header + UDP header + UDP data).
 
     // IPv6 header
@@ -1150,7 +1150,6 @@ for(i=IHC_ETH_HDRLEN + IHC_IP6_HDRLEN+IHC_UDP_HDRLEN ; i< IHC_ETH_HDRLEN + IHC_I
 }
 
     IhcInfo ("[%s :%d] KAVYA  frame_length = [%d]\n",__FUNCTION__, __LINE__,frame_length);
-    IhcInfo ("[%s :%d] KAVYA ether_frame = ",__FUNCTION__, __LINE__);
 /*    for(i=0;i<frame_length;i++)
     {
         IhcInfo ("[%hhu]",ether_frame[i]);

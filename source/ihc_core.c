@@ -1034,8 +1034,8 @@ static int ihc_sendV6EchoPackets(char *interface, char *MACaddress)
     memcpy(ether_frame + IHC_ETH_HDRLEN + IHC_IP6_HDRLEN + IHC_UDP_HDRLEN, data, datalen);
 
     IhcInfo ("[%s :%d] KAVYA  frame_length = [%d]\n",__FUNCTION__, __LINE__,frame_length);
-    int i=0;
     IhcInfo ("[%s :%d] KAVYA ether_frame = ",__FUNCTION__, __LINE__);
+    int i;
     for(i=0;i<frame_length;i++)
     {
         IhcInfo ("[%hhu]",ether_frame[i]);
@@ -1106,7 +1106,6 @@ IhcInfo ("[%s :%d] KAVYA Calling udp6_checksum..\n",__FUNCTION__, __LINE__);
     memcpy(ether_frame + IHC_ETH_HDRLEN + IHC_IP6_HDRLEN + IHC_UDP_HDRLEN, data, datalen);
 
     IhcInfo ("[%s :%d] KAVYA  frame_length = [%d]\n",__FUNCTION__, __LINE__,frame_length);
-    int i=0;
     IhcInfo ("[%s :%d] KAVYA ether_frame = ",__FUNCTION__, __LINE__);
     for(i=0;i<frame_length;i++)
     {

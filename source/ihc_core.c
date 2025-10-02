@@ -622,9 +622,9 @@ static uint16_t csum(uint16_t *buf, int nwords)
     return (uint16_t)(~sum);
 }
 
+// Note that the internet checksum does not preclude collisions.
 /**
  * @brief Data checksum calculations
- *
  * @param data Paylaod data
  * @param len payload length
  * @return uint16_t calculated checksum
@@ -697,6 +697,7 @@ static uint16_t calculate_udp6_checksum(struct ip6_hdr ipv6_header, struct udphd
     memset(buffer_ptr, 0, 3);
     buffer_ptr += 3;
     checksum_len += 3;
+
     // Add next header field (8 bits)
     append_to_buffer(&buffer_ptr, &checksum_len, &ipv6_header.ip6_nxt, sizeof(ipv6_header.ip6_nxt));
 
@@ -720,7 +721,7 @@ static uint16_t calculate_udp6_checksum(struct ip6_hdr ipv6_header, struct udphd
         checksum_len++;
     }
 
-    return  compute_checksum((uint16_t *)packet_buffer, checksum_len);
+    return compute_checksum((uint16_t *)packet_buffer, checksum_len);
 }
 
 /**

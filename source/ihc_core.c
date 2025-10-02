@@ -629,7 +629,7 @@ static uint16_t csum(uint16_t *buf, int nwords)
  * @param len payload length
  * @return uint16_t calculated checksum
  */
-/*
+
 static uint16_t checksum(uint16_t *addr, int len)
 {
     int count = len;
@@ -667,7 +667,7 @@ static uint16_t checksum(uint16_t *addr, int len)
 
     return (answer);
 }
-*/
+
 
 /**
  * @brief IPV6 UDP header checksum calculation functions
@@ -678,7 +678,7 @@ static uint16_t checksum(uint16_t *addr, int len)
  * @param payloadlen Payload length
  * @return uint16_t return checksum
  */
-/*
+
 static uint16_t udp6_checksum(struct ip6_hdr iphdr, struct udphdr udphdr, uint8_t *payload, int payloadlen)
 {
     char buf[IP_MAXPACKET];
@@ -756,7 +756,7 @@ static uint16_t udp6_checksum(struct ip6_hdr iphdr, struct udphdr udphdr, uint8_
 
     return checksum((uint16_t *)buf, chksumlen);
 }
-*/
+
 /**
  * @brief Data checksum calculations
  *
@@ -870,6 +870,7 @@ static uint16_t calculate_udp6_checksum(struct ip6_hdr ipv6_header, struct udphd
 
 static int ihc_sendV6EchoPackets(char *interface, char *MACaddress)
 {
+	    IhcInfo ("[%s :%d] KAVYA ENTER ..",__FUNCTION__, __LINE__);
     int status = 0;
     int datalen = 0;
     int frame_length = 0;
@@ -894,6 +895,7 @@ static int ihc_sendV6EchoPackets(char *interface, char *MACaddress)
 
     if (interface == NULL || MACaddress == NULL)
     {
+	    IhcInfo ("[%s :%d] KAVYA ..",__FUNCTION__, __LINE__);
         IhcError("[%s:%d] Invalid args...", __FUNCTION__, __LINE__);
         return IHC_FAILURE;
     }
@@ -901,6 +903,7 @@ static int ihc_sendV6EchoPackets(char *interface, char *MACaddress)
     // Submit request for a socket descriptor to look up interface.
     if ((sockV6 = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) < 0)
     {
+	    IhcInfo ("[%s :%d] KAVYA ..",__FUNCTION__, __LINE__);
         IhcError("[%s:%d] socket() failed to get socket descriptor for using ioctl() : %s", __FUNCTION__, __LINE__, strerror(errno));
         return IHC_FAILURE;
     }
@@ -910,6 +913,7 @@ static int ihc_sendV6EchoPackets(char *interface, char *MACaddress)
     snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", interface);
     if (ioctl(sockV6, SIOCGIFHWADDR, &ifr) < 0)
     {
+	    IhcInfo ("[%s :%d] KAVYA ..",__FUNCTION__, __LINE__);
         IhcError("ioctl() failed to get source MAC address : %s", strerror(errno));
         close(sockV6);
         return IHC_FAILURE;
@@ -924,6 +928,7 @@ static int ihc_sendV6EchoPackets(char *interface, char *MACaddress)
     memset(&device, 0, sizeof(device));
     if ((device.sll_ifindex = if_nametoindex(interface)) == 0)
     {
+	    IhcInfo ("[%s :%d] KAVYA ..",__FUNCTION__, __LINE__);
         IhcError("if_nametoindex() failed to obtain interface index : %s", strerror(errno));
         return IHC_FAILURE;
     }
@@ -939,6 +944,7 @@ static int ihc_sendV6EchoPackets(char *interface, char *MACaddress)
     IhcInfo ("[%s :%d] BNG MAC %s",__FUNCTION__, __LINE__, MACaddress);
     if ((ret = ihc_get_ipv6_global_address(globalAddress, sizeof(globalAddress))) != IHC_SUCCESS)
     {
+	    IhcInfo ("[%s :%d] KAVYA ..",__FUNCTION__, __LINE__);
         IhcError("ihc_get_ipv6_global_address failed : %d ", ret);
         return IHC_FAILURE;
     }
@@ -971,6 +977,7 @@ static int ihc_sendV6EchoPackets(char *interface, char *MACaddress)
     // Source IPv6 address (128 bits)
     if ((status = inet_pton(AF_INET6, src_ip, &(iphdr.ip6_src))) != 1)
     {
+	    IhcInfo ("[%s :%d] KAVYA ..",__FUNCTION__, __LINE__);
         IhcError("inet_pton() failed.\nError message: %s", strerror(status));
         return IHC_FAILURE;
     }
@@ -978,6 +985,7 @@ static int ihc_sendV6EchoPackets(char *interface, char *MACaddress)
     // Destination IPv6 address (128 bits)
     if ((status = inet_pton(AF_INET6, src_ip, &(iphdr.ip6_dst))) != 1)
     {
+	    IhcInfo ("[%s :%d] KAVYA ..",__FUNCTION__, __LINE__);
         IhcError("inet_pton() failed.Error message: %s", strerror(status));
         return IHC_FAILURE;
     }
@@ -993,7 +1001,7 @@ static int ihc_sendV6EchoPackets(char *interface, char *MACaddress)
     udphdr.len = htons(IHC_UDP_HDRLEN + datalen);
 
     // UDP checksum (16 bits)
-    //if ((udphdr.check = udp6_checksum(iphdr, udphdr, data, datalen)) == 0)
+    IhcInfo ("[%s :%d] KAVYA Calling calculate_udp6_checksum ..",__FUNCTION__, __LINE__);
     if ((udphdr.check = calculate_udp6_checksum(iphdr, udphdr, data, datalen)) == 0)
     {
         IhcError("[%s %d] unable to generate checksum", __FUNCTION__, __LINE__);
@@ -1035,6 +1043,7 @@ static int ihc_sendV6EchoPackets(char *interface, char *MACaddress)
     // Submit request for a raw socket descriptor.
     if ((sockV6 = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) < 0)
     {
+	    IhcInfo ("[%s :%d] KAVYA ..",__FUNCTION__, __LINE__);
         IhcError("socket() failed : %s", strerror(errno));
         return IHC_FAILURE;
     }
@@ -1042,6 +1051,7 @@ static int ihc_sendV6EchoPackets(char *interface, char *MACaddress)
     /* setting socket option to use MARK value(Priority 7 - high priority queue) */
     if (setsockopt(sockV6, SOL_SOCKET, SO_MARK, &packet_priority, sizeof(packet_priority)) < 0)
     {
+	    IhcInfo ("[%s :%d] KAVYA ..",__FUNCTION__, __LINE__);
         IhcError("socket marking failed : %s", strerror(errno));
         close(sockV6);
         return IHC_FAILURE;
@@ -1049,6 +1059,7 @@ static int ihc_sendV6EchoPackets(char *interface, char *MACaddress)
     // Send ethernet frame to socket.
     if ((bytes = sendto(sockV6, ether_frame, frame_length, 0, (struct sockaddr *)&device, sizeof(device))) <= 0)
     {
+	 IhcInfo ("[%s :%d] KAVYA ..",__FUNCTION__, __LINE__);
         IhcError("sendto() failed : %s", strerror(errno));
         close(sockV6);
         return IHC_FAILURE;
@@ -1062,6 +1073,78 @@ static int ihc_sendV6EchoPackets(char *interface, char *MACaddress)
     // Close V6 socket descriptor.
     close(sockV6);
 
+IhcInfo ("[%s :%d] KAVYA Calling udp6_checksum..\n",__FUNCTION__, __LINE__);
+    if ((udphdr.check = udp6_checksum(iphdr, udphdr, data, datalen)) == 0)
+    {
+        IhcError("[%s %d] unable to generate checksum", __FUNCTION__, __LINE__);
+        return IHC_FAILURE;
+    }
+
+    // Fill out ethernet frame header.
+
+    // Ethernet frame length = ethernet header (MAC + MAC + ethernet type) + ethernet data (IP header + UDP header + UDP data)
+    frame_length = IHC_MACADDR_LEN + IHC_MACADDR_LEN + IHC_ETHTYPE_LEN + IHC_IP6_HDRLEN + IHC_UDP_HDRLEN + datalen;
+
+    // Destination and Source MAC addresses
+    memcpy(ether_frame, dst_mac, IHC_MACADDR_LEN);
+    memcpy(ether_frame + IHC_MACADDR_LEN, src_mac, IHC_MACADDR_LEN);
+
+    // Next is ethernet type code (ETH_P_IPV6 for IPv6).
+    // http://www.iana.org/assignments/ethernet-numbers
+    ether_frame[12] = ETH_P_IPV6 / 256;
+    ether_frame[13] = ETH_P_IPV6 % 256;
+
+    // Next is ethernet frame data (IPv6 header + UDP header + UDP data).
+
+    // IPv6 header
+    memcpy(ether_frame + IHC_ETH_HDRLEN, &iphdr, IHC_IP6_HDRLEN);
+
+    // UDP header
+    memcpy(ether_frame + IHC_ETH_HDRLEN + IHC_IP6_HDRLEN, &udphdr, IHC_UDP_HDRLEN);
+
+    // UDP data
+    memcpy(ether_frame + IHC_ETH_HDRLEN + IHC_IP6_HDRLEN + IHC_UDP_HDRLEN, data, datalen);
+
+    IhcInfo ("[%s :%d] KAVYA  frame_length = [%d]\n",__FUNCTION__, __LINE__,frame_length);
+    int i=0;
+    IhcInfo ("[%s :%d] KAVYA ether_frame = ",__FUNCTION__, __LINE__);
+    for(i=0;i<frame_length;i++)
+    {
+        IhcInfo ("[%hhu]",ether_frame[i]);
+    }
+    // Submit request for a raw socket descriptor.
+    if ((sockV6 = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) < 0)
+    {
+	    IhcInfo ("[%s :%d] KAVYA ..\n",__FUNCTION__, __LINE__);
+        IhcError("socket() failed : %s", strerror(errno));
+        return IHC_FAILURE;
+    }
+
+    /* setting socket option to use MARK value(Priority 7 - high priority queue) */
+    if (setsockopt(sockV6, SOL_SOCKET, SO_MARK, &packet_priority, sizeof(packet_priority)) < 0)
+    {
+	    IhcInfo ("[%s :%d] KAVYA ..\n",__FUNCTION__, __LINE__);
+        IhcError("socket marking failed : %s", strerror(errno));
+        close(sockV6);
+        return IHC_FAILURE;
+    }
+    // Send ethernet frame to socket.
+    if ((bytes = sendto(sockV6, ether_frame, frame_length, 0, (struct sockaddr *)&device, sizeof(device))) <= 0)
+    {
+	    IhcInfo ("[%s :%d] KAVYA ..\n",__FUNCTION__, __LINE__);
+        IhcError("sendto() failed : %s", strerror(errno));
+        close(sockV6);
+        return IHC_FAILURE;
+    }
+    else
+    {
+        IhcInfo("Echo packets V6 TX [%u -> %u]", g_echo_V6_failure_count, g_echo_V6_failure_count + 1);
+    IhcInfo ("[%s :%d] KAVYA g_echo_V6_failure_count = [%d]\n",__FUNCTION__, __LINE__,g_echo_V6_failure_count);
+    }
+    // Close V6 socket descriptor.
+    close(sockV6);
+
+    IhcInfo ("[%s :%d] KAVYA Done ..\n",__FUNCTION__, __LINE__);	    
     return IHC_SUCCESS;
 }
 

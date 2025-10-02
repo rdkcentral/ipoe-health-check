@@ -637,7 +637,7 @@ static uint16_t compute_checksum(uint16_t *data, int len)
     }
     register uint32_t sum = 0;
 
-    // Sum 16-bit words
+    // Sum up 2-byte values until none or only one byte left.
     while (len > 1) {
 	sum += *(data++);
 	len -= 2;
@@ -719,6 +719,7 @@ static uint16_t calculate_udp6_checksum(struct ip6_hdr ipv6_header, struct udphd
         buffer_ptr++;
         checksum_len++;
     }
+
     return  compute_checksum((uint16_t *)packet_buffer, checksum_len);
 }
 
@@ -868,20 +869,24 @@ static int ihc_sendV6EchoPackets(char *interface, char *MACaddress)
 
     // Destination and Source MAC addresses
     memcpy(ether_frame, dst_mac, IHC_MACADDR_LEN);
-
     memcpy(ether_frame + IHC_MACADDR_LEN, src_mac, IHC_MACADDR_LEN);
 
     // Next is ethernet type code (ETH_P_IPV6 for IPv6).
     // http://www.iana.org/assignments/ethernet-numbers
     ether_frame[12] = ETH_P_IPV6 / 256;
     ether_frame[13] = ETH_P_IPV6 % 256;
+
     // Next is ethernet frame data (IPv6 header + UDP header + UDP data).
+
     // IPv6 header
     memcpy(ether_frame + IHC_ETH_HDRLEN, &iphdr, IHC_IP6_HDRLEN);
+
     // UDP header
     memcpy(ether_frame + IHC_ETH_HDRLEN + IHC_IP6_HDRLEN, &udphdr, IHC_UDP_HDRLEN);
+
     // UDP data
     memcpy(ether_frame + IHC_ETH_HDRLEN + IHC_IP6_HDRLEN + IHC_UDP_HDRLEN, data, datalen);
+
     // Submit request for a raw socket descriptor.
     if ((sockV6 = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) < 0)
     {
@@ -1780,6 +1785,7 @@ int ihc_echo_handler(void)
                                         IhcError("IHC_V6_1ST_PKT_FAILURE :: IHC: IPOE health check(IPv6) first packet failure");
                                         Is_v6_bfd_1stpkt_failure_occurs = TRUE;
                                     }
+
                                     g_echo_V6_failure_count++;
                                 }
                                 else

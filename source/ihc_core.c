@@ -636,6 +636,7 @@ static uint16_t compute_checksum(uint16_t *data, int len)
         return IHC_FAILURE;
     }
     register uint32_t sum = 0;
+    uint16_t answer = 0;
 
     // Sum up 2-byte values until none or only one byte left.
     while (len > 1) {
@@ -655,7 +656,8 @@ static uint16_t compute_checksum(uint16_t *data, int len)
     }
 
     //Checksum is one's complement of sum.
-    return (uint16_t)(~sum);
+    answer = ~sum;
+    return (answer);
 }
 
 static void append_to_buffer(char **buf_ptr, int *total_len, const void *src, size_t size)

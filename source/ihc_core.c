@@ -621,144 +621,6 @@ static uint16_t csum(uint16_t *buf, int nwords)
     sum += (sum >> CSUM_16_BIT_SHIFT);
     return (uint16_t)(~sum);
 }
-// Note that the internet checksum does not preclude collisions.
-/**
- * @brief Data checksum calculations
- *
- * @param addr Paylaod data
- * @param len payload length
- * @return uint16_t calculated checksum
- */
-
-static uint16_t checksum(uint16_t *addr, int len)
-{
-    int count = len;
-    register uint32_t sum = 0;
-    uint16_t answer = 0;
-
-    if (addr == NULL)
-    {
-        IhcError("[%s: %d] Invalid args..", __FUNCTION__, __LINE__);
-        return IHC_FAILURE;
-    }
-
-    // Sum up 2-byte values until none or only one byte left.
-    while (count > 1)
-    {
-        sum += *(addr++);
-        count -= 2;
-    }
-
-    // Add left-over byte, if any.
-    if (count > 0)
-    {
-        sum += *(uint8_t *)addr;
-    }
-
-    // Implementation based on RFC1071.
-    // Fold 32-bit sum to 16 bits
-    while (sum >> 16)
-    {
-        sum = (sum & CSUM_16_BIT_MASK) + (sum >> 16);
-    }
-
-    // Checksum is one's compliment of sum.
-    answer = ~sum;
-
-    return (answer);
-}
-
-
-/**
- * @brief IPV6 UDP header checksum calculation functions
- * Build IPv6 UDP pseudo-header and call checksum function (Section 8.1 of RFC 2460).
- * @param iphdr IPV6 header
- * @param udphdr UDP header
- * @param payload payload (IPV6 data)
- * @param payloadlen Payload length
- * @return uint16_t return checksum
- */
-
-static uint16_t udp6_checksum(struct ip6_hdr iphdr, struct udphdr udphdr, uint8_t *payload, int payloadlen)
-{
-    char buf[IP_MAXPACKET];
-    char *ptr;
-    int chksumlen = 0;
-    int i;
-
-    if (payload == NULL)
-    {
-        IhcError("[%s %d] Invalid args...", __FUNCTION__, __LINE__);
-        return 0;
-    }
-
-    ptr = &buf[0]; // ptr points to beginning of buffer buf
-
-    // Copy source IP address into buf (128 bits)
-    memcpy(ptr, &iphdr.ip6_src.s6_addr, sizeof(iphdr.ip6_src.s6_addr));
-    ptr += sizeof(iphdr.ip6_src.s6_addr);
-    chksumlen += sizeof(iphdr.ip6_src.s6_addr);
-
-
-    // Copy destination IP address into buf (128 bits)
-    memcpy(ptr, &iphdr.ip6_dst.s6_addr, sizeof(iphdr.ip6_dst.s6_addr));
-    ptr += sizeof(iphdr.ip6_dst.s6_addr);
-    chksumlen += sizeof(iphdr.ip6_dst.s6_addr);
-
-    // Copy UDP length into buf (32 bits)
-    memcpy(ptr, &udphdr.len, sizeof(udphdr.len));
-    ptr += sizeof(udphdr.len);
-    chksumlen += sizeof(udphdr.len);
-
-    // Copy zero field to buf (24 bits)
-    memset(ptr, 0, 3);
-    ptr += 3;
-    chksumlen += 3;
-
-    // Copy next header field to buf (8 bits)
-    memcpy(ptr, &iphdr.ip6_nxt, sizeof(iphdr.ip6_nxt));
-    ptr += sizeof(iphdr.ip6_nxt);
-    chksumlen += sizeof(iphdr.ip6_nxt);
-
-    // Copy UDP source port to buf (16 bits)
-    memcpy(ptr, &udphdr.source, sizeof(udphdr.source));
-    ptr += sizeof(udphdr.source);
-    chksumlen += sizeof(udphdr.source);
-
-    // Copy UDP destination port to buf (16 bits)
-    memcpy(ptr, &udphdr.dest, sizeof(udphdr.dest));
-    ptr += sizeof(udphdr.dest);
-    chksumlen += sizeof(udphdr.dest);
-
-    // Copy UDP length again to buf (16 bits)
-    memcpy(ptr, &udphdr.len, sizeof(udphdr.len));
-    ptr += sizeof(udphdr.len);
-    chksumlen += sizeof(udphdr.len);
-
-    // Copy UDP checksum to buf (16 bits)
-    // Zero, since we don't know it yet
-    memset(ptr, 0, 2);
-    ptr += 2;
-    chksumlen += 2;
-
-    // Copy payload to buf
-    memcpy(ptr, payload, payloadlen);
-    ptr += payloadlen;
-    chksumlen += payloadlen;
-
-    // Pad to the next 16-bit boundary
-    for (i = 0; i < payloadlen % 2; i++, ptr++)
-    {
-        *ptr = 0;
-        ptr++;
-        chksumlen++;
-    }
-  IhcInfo ("[%s :%d] buffer  = [%s]",__FUNCTION__, __LINE__,buf);
-  IhcInfo ("[%s :%d] chksumlen  = [%d]",__FUNCTION__, __LINE__,chksumlen);
-    
-IhcInfo ("[%s :%d] checksum = [%hu]",__FUNCTION__, __LINE__, checksum((uint16_t *)buf, chksumlen));
-    return checksum((uint16_t *)buf, chksumlen);
-}
 
 /**
  * @brief Data checksum calculations
@@ -773,30 +635,29 @@ static uint16_t compute_checksum(uint16_t *data, int len)
         IhcError("[%s: %d] Invalid args..", __FUNCTION__, __LINE__);
         return IHC_FAILURE;
     }
-    const uint8_t *bytes = (const uint8_t *)data;
-    uint32_t sum = 0;
+    register uint32_t sum = 0;
 
     // Sum 16-bit words
     while (len > 1) {
-        uint16_t word = ((uint16_t)bytes[0] << 8) | bytes[1];
-        sum += word;
-        bytes += 2;
-        len -= 2;
+	sum += *(data++);
+	len -= 2;
     }
 
-    // Add left-over byte, if any (pad with zero)
+    // Add left-over byte, if any.
     if (len > 0) {
-        uint16_t word = ((uint16_t)bytes[0]) << 8;
-        sum += word;
+	sum += *(uint8_t *)data;
     }
 
     // Fold 32-bit sum to 16 bits
     while (sum >> 16)
-        sum = (sum & 0xFFFF) + (sum >> 16);
+    {
+        sum = (sum & CSUM_16_BIT_MASK) + (sum >> 16);
+    }
 
-    // One's complement
+    //Checksum is one's complement of sum.
     return (uint16_t)(~sum);
 }
+
 static void append_to_buffer(char **buf_ptr, int *total_len, const void *src, size_t size)
 {
     memcpy(*buf_ptr, src, size);
@@ -858,11 +719,7 @@ static uint16_t calculate_udp6_checksum(struct ip6_hdr ipv6_header, struct udphd
         buffer_ptr++;
         checksum_len++;
     }
-  IhcInfo ("[%s :%d] packet_buffer  = [%s]",__FUNCTION__, __LINE__,packet_buffer);
-  IhcInfo ("[%s :%d] checksum_len  = [%d]",__FUNCTION__, __LINE__,checksum_len);
-    IhcInfo ("[%s :%d] compute_checksum = [%hu]",__FUNCTION__, __LINE__, compute_checksum((uint16_t *)packet_buffer, checksum_len));	   
-   IhcInfo ("[%s :%d] checksum = [%hu]",__FUNCTION__, __LINE__, checksum((uint16_t *)packet_buffer, checksum_len)); 
-    return checksum((uint16_t *)packet_buffer, checksum_len);
+    return  compute_checksum((uint16_t *)packet_buffer, checksum_len);
 }
 
 /**
@@ -875,7 +732,6 @@ static uint16_t calculate_udp6_checksum(struct ip6_hdr ipv6_header, struct udphd
 
 static int ihc_sendV6EchoPackets(char *interface, char *MACaddress)
 {
-	    IhcInfo ("[%s :%d] KAVYA ENTER ..",__FUNCTION__, __LINE__);
     int status = 0;
     int datalen = 0;
     int frame_length = 0;
@@ -900,7 +756,6 @@ static int ihc_sendV6EchoPackets(char *interface, char *MACaddress)
 
     if (interface == NULL || MACaddress == NULL)
     {
-	    IhcInfo ("[%s :%d] KAVYA ..",__FUNCTION__, __LINE__);
         IhcError("[%s:%d] Invalid args...", __FUNCTION__, __LINE__);
         return IHC_FAILURE;
     }
@@ -908,7 +763,6 @@ static int ihc_sendV6EchoPackets(char *interface, char *MACaddress)
     // Submit request for a socket descriptor to look up interface.
     if ((sockV6 = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) < 0)
     {
-	    IhcInfo ("[%s :%d] KAVYA ..",__FUNCTION__, __LINE__);
         IhcError("[%s:%d] socket() failed to get socket descriptor for using ioctl() : %s", __FUNCTION__, __LINE__, strerror(errno));
         return IHC_FAILURE;
     }
@@ -918,7 +772,6 @@ static int ihc_sendV6EchoPackets(char *interface, char *MACaddress)
     snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", interface);
     if (ioctl(sockV6, SIOCGIFHWADDR, &ifr) < 0)
     {
-	    IhcInfo ("[%s :%d] KAVYA ..",__FUNCTION__, __LINE__);
         IhcError("ioctl() failed to get source MAC address : %s", strerror(errno));
         close(sockV6);
         return IHC_FAILURE;
@@ -933,7 +786,6 @@ static int ihc_sendV6EchoPackets(char *interface, char *MACaddress)
     memset(&device, 0, sizeof(device));
     if ((device.sll_ifindex = if_nametoindex(interface)) == 0)
     {
-	    IhcInfo ("[%s :%d] KAVYA ..",__FUNCTION__, __LINE__);
         IhcError("if_nametoindex() failed to obtain interface index : %s", strerror(errno));
         return IHC_FAILURE;
     }
@@ -949,7 +801,6 @@ static int ihc_sendV6EchoPackets(char *interface, char *MACaddress)
     IhcInfo ("[%s :%d] BNG MAC %s",__FUNCTION__, __LINE__, MACaddress);
     if ((ret = ihc_get_ipv6_global_address(globalAddress, sizeof(globalAddress))) != IHC_SUCCESS)
     {
-	    IhcInfo ("[%s :%d] KAVYA ..",__FUNCTION__, __LINE__);
         IhcError("ihc_get_ipv6_global_address failed : %d ", ret);
         return IHC_FAILURE;
     }
@@ -982,7 +833,6 @@ static int ihc_sendV6EchoPackets(char *interface, char *MACaddress)
     // Source IPv6 address (128 bits)
     if ((status = inet_pton(AF_INET6, src_ip, &(iphdr.ip6_src))) != 1)
     {
-	    IhcInfo ("[%s :%d] KAVYA ..",__FUNCTION__, __LINE__);
         IhcError("inet_pton() failed.\nError message: %s", strerror(status));
         return IHC_FAILURE;
     }
@@ -990,7 +840,6 @@ static int ihc_sendV6EchoPackets(char *interface, char *MACaddress)
     // Destination IPv6 address (128 bits)
     if ((status = inet_pton(AF_INET6, src_ip, &(iphdr.ip6_dst))) != 1)
     {
-	    IhcInfo ("[%s :%d] KAVYA ..",__FUNCTION__, __LINE__);
         IhcError("inet_pton() failed.Error message: %s", strerror(status));
         return IHC_FAILURE;
     }
@@ -1006,7 +855,6 @@ static int ihc_sendV6EchoPackets(char *interface, char *MACaddress)
     udphdr.len = htons(IHC_UDP_HDRLEN + datalen);
 
     // UDP checksum (16 bits)
-    IhcInfo ("[%s :%d] KAVYA Calling calculate_udp6_checksum ..",__FUNCTION__, __LINE__);
     if ((udphdr.check = calculate_udp6_checksum(iphdr, udphdr, data, datalen)) == 0)
     {
         IhcError("[%s %d] unable to generate checksum", __FUNCTION__, __LINE__);
@@ -1020,53 +868,23 @@ static int ihc_sendV6EchoPackets(char *interface, char *MACaddress)
 
     // Destination and Source MAC addresses
     memcpy(ether_frame, dst_mac, IHC_MACADDR_LEN);
-    int i = 0;
-    for(i=0; i<IHC_MACADDR_LEN ; i++)
-    {
-        IhcInfo ("[%d] = [%hhu]",i,ether_frame[i]);
-    }
+
     memcpy(ether_frame + IHC_MACADDR_LEN, src_mac, IHC_MACADDR_LEN);
 
-    for(i=IHC_MACADDR_LEN;i<IHC_MACADDR_LEN+IHC_MACADDR_LEN;i++)
-    {
-	    IhcInfo ("[%d] = [%hhu]",ether_frame[i]);
-    }
     // Next is ethernet type code (ETH_P_IPV6 for IPv6).
     // http://www.iana.org/assignments/ethernet-numbers
     ether_frame[12] = ETH_P_IPV6 / 256;
     ether_frame[13] = ETH_P_IPV6 % 256;
-IhcInfo ("[12] = [%hhu]",ether_frame[12]);
-IhcInfo ("[13] = [%hhu]",ether_frame[13]);
     // Next is ethernet frame data (IPv6 header + UDP header + UDP data).
-
     // IPv6 header
     memcpy(ether_frame + IHC_ETH_HDRLEN, &iphdr, IHC_IP6_HDRLEN);
-for(i=IHC_ETH_HDRLEN ; i< IHC_ETH_HDRLEN+IHC_IP6_HDRLEN ; i++)
-{
-	IhcInfo ("[%d] = [%hhu]",ether_frame[i]);
-}
     // UDP header
     memcpy(ether_frame + IHC_ETH_HDRLEN + IHC_IP6_HDRLEN, &udphdr, IHC_UDP_HDRLEN);
-for(i=IHC_ETH_HDRLEN + IHC_IP6_HDRLEN ; i< IHC_ETH_HDRLEN + IHC_IP6_HDRLEN+IHC_UDP_HDRLEN ; i++)
-{
-	IhcInfo ("[%d] = [%hhu]",ether_frame[i]);
-}
     // UDP data
     memcpy(ether_frame + IHC_ETH_HDRLEN + IHC_IP6_HDRLEN + IHC_UDP_HDRLEN, data, datalen);
-for(i=IHC_ETH_HDRLEN + IHC_IP6_HDRLEN+IHC_UDP_HDRLEN ; i< IHC_ETH_HDRLEN + IHC_IP6_HDRLEN + IHC_UDP_HDRLEN+datalen; i++)
-{
-	IhcInfo ("[%d] = [%hhu]",ether_frame[i]);
-}
-    IhcInfo ("[%s :%d] KAVYA  frame_length = [%d] datalen = [%d]",__FUNCTION__, __LINE__,frame_length,datalen);
-/*    int i;
-    for(i=0;i<frame_length;i++)
-    {
-        IhcInfo ("[%hhu]",ether_frame[i]);
-    }*/
     // Submit request for a raw socket descriptor.
     if ((sockV6 = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) < 0)
     {
-	    IhcInfo ("[%s :%d] KAVYA ..",__FUNCTION__, __LINE__);
         IhcError("socket() failed : %s", strerror(errno));
         return IHC_FAILURE;
     }
@@ -1074,7 +892,6 @@ for(i=IHC_ETH_HDRLEN + IHC_IP6_HDRLEN+IHC_UDP_HDRLEN ; i< IHC_ETH_HDRLEN + IHC_I
     /* setting socket option to use MARK value(Priority 7 - high priority queue) */
     if (setsockopt(sockV6, SOL_SOCKET, SO_MARK, &packet_priority, sizeof(packet_priority)) < 0)
     {
-	    IhcInfo ("[%s :%d] KAVYA ..",__FUNCTION__, __LINE__);
         IhcError("socket marking failed : %s", strerror(errno));
         close(sockV6);
         return IHC_FAILURE;
@@ -1082,7 +899,6 @@ for(i=IHC_ETH_HDRLEN + IHC_IP6_HDRLEN+IHC_UDP_HDRLEN ; i< IHC_ETH_HDRLEN + IHC_I
     // Send ethernet frame to socket.
     if ((bytes = sendto(sockV6, ether_frame, frame_length, 0, (struct sockaddr *)&device, sizeof(device))) <= 0)
     {
-	 IhcInfo ("[%s :%d] KAVYA ..",__FUNCTION__, __LINE__);
         IhcError("sendto() failed : %s", strerror(errno));
         close(sockV6);
         return IHC_FAILURE;
@@ -1090,103 +906,11 @@ for(i=IHC_ETH_HDRLEN + IHC_IP6_HDRLEN+IHC_UDP_HDRLEN ; i< IHC_ETH_HDRLEN + IHC_I
     else
     {
         IhcInfo("Echo packets V6 TX [%u -> %u]", g_echo_V6_failure_count, g_echo_V6_failure_count + 1);
-    IhcInfo ("[%s :%d] KAVYA g_echo_V6_failure_count = [%d]\n",__FUNCTION__, __LINE__,g_echo_V6_failure_count);
     }
 
     // Close V6 socket descriptor.
     close(sockV6);
 
-IhcInfo ("[%s :%d] KAVYA Calling udp6_checksum..\n",__FUNCTION__, __LINE__);
-    if ((udphdr.check = udp6_checksum(iphdr, udphdr, data, datalen)) == 0)
-    {
-        IhcError("[%s %d] unable to generate checksum", __FUNCTION__, __LINE__);
-        return IHC_FAILURE;
-    }
-
-    // Fill out ethernet frame header.
-
-    // Ethernet frame length = ethernet header (MAC + MAC + ethernet type) + ethernet data (IP header + UDP header + UDP data)
-    frame_length = IHC_MACADDR_LEN + IHC_MACADDR_LEN + IHC_ETHTYPE_LEN + IHC_IP6_HDRLEN + IHC_UDP_HDRLEN + datalen;
-
-    // Destination and Source MAC addresses
-    memcpy(ether_frame, dst_mac, IHC_MACADDR_LEN);
-//    int i = 0;
-    for(i=0; i<IHC_MACADDR_LEN ; i++)
-    {
-        IhcInfo ("[%d] = [%hhu]",i,ether_frame[i]);
-    }
-    
-    memcpy(ether_frame + IHC_MACADDR_LEN, src_mac, IHC_MACADDR_LEN);
-    for(i=IHC_MACADDR_LEN;i<IHC_MACADDR_LEN+IHC_MACADDR_LEN;i++)
-    {
-            IhcInfo ("[%d] = [%hhu]",ether_frame[i]);
-    }
- 
-    // Next is ethernet type code (ETH_P_IPV6 for IPv6).
-    // http://www.iana.org/assignments/ethernet-numbers
-    ether_frame[12] = ETH_P_IPV6 / 256;
-    ether_frame[13] = ETH_P_IPV6 % 256;
-IhcInfo ("[12] = [%hhu]",ether_frame[12]);
-IhcInfo ("[13] = [%hhu]",ether_frame[13]);
-    // Next is ethernet frame data (IPv6 header + UDP header + UDP data).
-
-    // IPv6 header
-    memcpy(ether_frame + IHC_ETH_HDRLEN, &iphdr, IHC_IP6_HDRLEN);
-for(i=IHC_ETH_HDRLEN ; i< IHC_ETH_HDRLEN+IHC_IP6_HDRLEN ; i++)
-{
-        IhcInfo ("[%d] = [%hhu]",ether_frame[i]);
-}
-    // UDP header
-    memcpy(ether_frame + IHC_ETH_HDRLEN + IHC_IP6_HDRLEN, &udphdr, IHC_UDP_HDRLEN);
-for(i=IHC_ETH_HDRLEN + IHC_IP6_HDRLEN ; i< IHC_ETH_HDRLEN + IHC_IP6_HDRLEN+IHC_UDP_HDRLEN ; i++)
-{
-        IhcInfo ("[%d] = [%hhu]",ether_frame[i]);
-}
-    // UDP data
-    memcpy(ether_frame + IHC_ETH_HDRLEN + IHC_IP6_HDRLEN + IHC_UDP_HDRLEN, data, datalen);
-for(i=IHC_ETH_HDRLEN + IHC_IP6_HDRLEN+IHC_UDP_HDRLEN ; i< IHC_ETH_HDRLEN + IHC_IP6_HDRLEN + IHC_UDP_HDRLEN+datalen; i++)
-{
-        IhcInfo ("[%d] = [%hhu]",ether_frame[i]);
-}
-
-    IhcInfo ("[%s :%d] KAVYA  frame_length = [%d]\n",__FUNCTION__, __LINE__,frame_length);
-/*    for(i=0;i<frame_length;i++)
-    {
-        IhcInfo ("[%hhu]",ether_frame[i]);
-    }*/
-    // Submit request for a raw socket descriptor.
-    if ((sockV6 = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) < 0)
-    {
-	    IhcInfo ("[%s :%d] KAVYA ..\n",__FUNCTION__, __LINE__);
-        IhcError("socket() failed : %s", strerror(errno));
-        return IHC_FAILURE;
-    }
-
-    /* setting socket option to use MARK value(Priority 7 - high priority queue) */
-    if (setsockopt(sockV6, SOL_SOCKET, SO_MARK, &packet_priority, sizeof(packet_priority)) < 0)
-    {
-	    IhcInfo ("[%s :%d] KAVYA ..\n",__FUNCTION__, __LINE__);
-        IhcError("socket marking failed : %s", strerror(errno));
-        close(sockV6);
-        return IHC_FAILURE;
-    }
-    // Send ethernet frame to socket.
-    if ((bytes = sendto(sockV6, ether_frame, frame_length, 0, (struct sockaddr *)&device, sizeof(device))) <= 0)
-    {
-	    IhcInfo ("[%s :%d] KAVYA ..\n",__FUNCTION__, __LINE__);
-        IhcError("sendto() failed : %s", strerror(errno));
-        close(sockV6);
-        return IHC_FAILURE;
-    }
-    else
-    {
-        IhcInfo("Echo packets V6 TX [%u -> %u]", g_echo_V6_failure_count, g_echo_V6_failure_count + 1);
-    IhcInfo ("[%s :%d] KAVYA g_echo_V6_failure_count = [%d]\n",__FUNCTION__, __LINE__,g_echo_V6_failure_count);
-    }
-    // Close V6 socket descriptor.
-    close(sockV6);
-
-    IhcInfo ("[%s :%d] KAVYA Done ..\n",__FUNCTION__, __LINE__);	    
     return IHC_SUCCESS;
 }
 
@@ -1743,14 +1467,12 @@ int ihc_echo_handler(void)
 
             if ((echo_reply_socket_v6 != IHC_FAILURE) && FD_ISSET(echo_reply_socket_v6, &r_fds))
             {
-		    IhcInfo ("[%s :%d] KAVYA ",__FUNCTION__, __LINE__);
                 if (recvfrom(echo_reply_socket_v6, recvBuf, sizeof(recvBuf), 0, &srcAddr, &sendsize) < 0)
                 {
-			IhcInfo ("[%s :%d] KAVYA ",__FUNCTION__, __LINE__);
                     IhcError("echo reply recvfrom failed: %s", strerror(errno));
                 }
                 else
-                {IhcInfo ("[%s :%d] KAVYA ",__FUNCTION__, __LINE__);
+                {
                     /*
                      * - Startup sequence :- Continous 3 success echo (Continous 3 Failure echo leads to IDLE state)
                      * - Normal sequence  :- Starts after successful 'Startup sequence'
@@ -1761,55 +1483,46 @@ int ihc_echo_handler(void)
                      */
                     if(v6_startup_sequence_completed == FALSE)
                     {
-			    IhcInfo ("[%s :%d] KAVYA ",__FUNCTION__, __LINE__);
                         ipv6_echo_time_interval = IHC_DEFAULT_RETRY_INTERVAL; //Retry Interval 10s
 
                         if( g_echo_V6_failure_count == 1 )
                         {
-				IhcInfo ("[%s :%d] KAVYA ",__FUNCTION__, __LINE__);
                             g_echo_V6_success_count++;
                             if( g_echo_V6_success_count >= IHC_DEFAULT_LIMIT )
                             {
-				    IhcInfo ("[%s :%d] KAVYA ",__FUNCTION__, __LINE__);
                                 IhcNotice("IHC_V6_STARTUP_COMPLETED :: IHC: IPOE health check(IPv6) startup sequence completed");
                                 v6_startup_sequence_completed = TRUE;
                                 ipv6_echo_time_interval = IHC_DEFAULT_REGULAR_INTERVAL; //Regular Interval 30s
                                 /* Send a message to WAN Manager that the IPV6 connection is up */
                                 if (ihc_broadcastEvent(IPOE_MSG_IHC_ECHO_IPV6_UP) != IHC_SUCCESS)
                                 {
-					IhcInfo ("[%s :%d] KAVYA ",__FUNCTION__, __LINE__);
                                     IhcError("Sending IPOE_MSG_IHC_ECHO_IPV6_UP failed");
                                 }
                                 // ping to v6 gw is success.
                                 // Set sysevent so that other modules(eg: selfheal) can detect the gw status for logging purpose
                                 if(sysevent_fd != -1)
                                 {
-					IhcInfo ("[%s :%d] KAVYA ",__FUNCTION__, __LINE__);
                                     sysevent_set(sysevent_fd, sysevent_token, IPOE_HEALTH_CHECK_V6_STATUS, IPOE_STATUS_SUCCESS, 0);
                                 }
                             }
                         }
                         else
                         {
-				IhcInfo ("[%s :%d] KAVYA ",__FUNCTION__, __LINE__);
                             g_echo_V6_success_count = 1;
                         }
 
                         if( ( FALSE == Is_v6_bfd_1stpkt_success_occurs ) && ( 0 < g_echo_V6_success_count ) )
                         {
-				IhcInfo ("[%s :%d] KAVYA ",__FUNCTION__, __LINE__);
                             IhcNotice("IHC_V6_1ST_PKT_SUCCESS :: IHC: IPOE health check(IPv6) first packet success");
                             Is_v6_bfd_1stpkt_success_occurs = TRUE;
                         }
                     }
                     else // Normal Operation
                     {
-			    IhcInfo ("[%s :%d] KAVYA ",__FUNCTION__, __LINE__);
                         ipv6_echo_time_interval = IHC_DEFAULT_REGULAR_INTERVAL; //Regular Interval 30s
                     }
                     IhcInfo("Echo packets V6 RX [%u -> 0]", g_echo_V6_failure_count);
                     g_echo_V6_failure_count = 0;
-		    IhcInfo ("[%s :%d] KAVYA g_echo_V6_failure_count = [%d]\n",__FUNCTION__, __LINE__,g_echo_V6_failure_count);
                 }
             }
 
@@ -1963,79 +1676,63 @@ int ihc_echo_handler(void)
                     {
                         if (g_send_V6_echo)
                         {
-				IhcInfo ("[%s :%d] KAVYA ",__FUNCTION__, __LINE__);
                             IhcInfo("[%s:%d] v6 echo reply failure reached threshold", __FUNCTION__, __LINE__);
                             /*...Send RENEW/RELAESE in 'Normal Sequence'... */
                             if( v6_startup_sequence_completed )
                             {
-				    IhcInfo ("[%s :%d] KAVYA ",__FUNCTION__, __LINE__);
                                 /*...Send RELEASE if wan_v6_release = TRUE (This will be set from Request packets of DHCPC6)...*/
                                 if( wan_v6_release ) //RELEASE
                                 {
-					IhcInfo ("[%s :%d] KAVYA ",__FUNCTION__, __LINE__);
                                     IhcInfo("Sending IPOE_MSG_IHC_ECHO_FAIL_IPV6 failure");
                                     if (ihc_broadcastEvent(IPOE_MSG_IHC_ECHO_FAIL_IPV6) != IHC_SUCCESS)
                                     {
-					    IhcInfo ("[%s :%d] KAVYA ",__FUNCTION__, __LINE__);
                                         IhcError("Sending IPOE_MSG_IHC_ECHO_FAIL_IPV6 failed");
                                     }
                                 }
                                 else  /*...Send RENEW if wan_v6_release = FALSE (This will be set from Request packets of DHCPC6)...*/
                                 {
-					IhcInfo ("[%s :%d] KAVYA ",__FUNCTION__, __LINE__);
                                     IhcInfo("Sending IPOE_MSG_IHC_ECHO_RENEW_IPV6");
 
                                     if (ihc_broadcastEvent(IPOE_MSG_IHC_ECHO_RENEW_IPV6) != IHC_SUCCESS)
                                     {
-					    IhcInfo ("[%s :%d] KAVYA ",__FUNCTION__, __LINE__);
                                         IhcError("Sending IPOE_MSG_IHC_ECHO_FAIL_IPV6 failed");
                                     }
                                 }
-				IhcInfo ("[%s :%d] KAVYA ",__FUNCTION__, __LINE__);
                                 IhcError("IHC_V6_FAIL :: IHC: IPOE health check for IPv6 has failed");
                             }
                             else  /*...IPOE v6 check goes to IDLE after 3 continuous Failre echo in 'Startup Sequence'... */
                             {
-				    IhcInfo ("[%s :%d] KAVYA ",__FUNCTION__, __LINE__);
                                 if (ihc_resolve_domain_name(domainName) != IHC_SUCCESS)
                                 {
-					IhcInfo ("[%s :%d] KAVYA ",__FUNCTION__, __LINE__);
                                     IhcError("%s %d: Domain Name resolution failed\n", __FUNCTION__, __LINE__);
                                     /*...Send RELEASE if wan_v6_release = TRUE (This will be set from Request packets)...*/
                                     if( wan_v6_release ) //RELEASE
                                     {
-					    IhcInfo ("[%s :%d] KAVYA ",__FUNCTION__, __LINE__);
                                         IhcInfo("[%s:%d] Sending IPOE_MSG_IHC_ECHO_FAIL_IPV6 failure message to WanManager", __FUNCTION__, __LINE__);
                                         if (ihc_broadcastEvent(IPOE_MSG_IHC_ECHO_FAIL_IPV6) != IHC_SUCCESS)
                                         {
-						IhcInfo ("[%s :%d] KAVYA ",__FUNCTION__, __LINE__);
                                             IhcError("Sending IPOE_MSG_IHC_ECHO_FAIL_IPV6 failed");
                                         }
                                     }
                                     else  /*...Send RENEW if wan_v6_release = FALSE (This will be set from Request packets)...*/
                                     {
-					    IhcInfo ("[%s :%d] KAVYA ",__FUNCTION__, __LINE__);
                                         IhcInfo("[%s:%d] Sending IPOE_MSG_IHC_ECHO_RENEW_IPV6", __FUNCTION__, __LINE__);
 
                                         if (ihc_broadcastEvent(IPOE_MSG_IHC_ECHO_RENEW_IPV6) != IHC_SUCCESS)
                                         {
-						IhcInfo ("[%s :%d] KAVYA ",__FUNCTION__, __LINE__);
                                             IhcError("Sending IPOE_MSG_IHC_ECHO_FAIL_IPV6 failed");
                                         }
                                     }
                                 }
                                 else
                                 {
-					IhcInfo ("[%s :%d] KAVYA ",__FUNCTION__, __LINE__);
                                     IhcInfo("[%s:%d] Sending IPOE_MSG_IHC_ECHO_IPV6_IDLE", __FUNCTION__, __LINE__);
                                     if (ihc_broadcastEvent(IPOE_MSG_IHC_ECHO_IPV6_IDLE) != IHC_SUCCESS)
                                     {
-					    IhcInfo ("[%s :%d] KAVYA ",__FUNCTION__, __LINE__);
                                         IhcError("IHC_V6_IDLE :: IHC: IPOE health check(IPv6) IDLE");
                                     }					
                                 }
                             }
-			    IhcInfo ("[%s :%d] KAVYA ",__FUNCTION__, __LINE__);
                             ihc_stop_echo_packets(IHC_ECHO_TYPE_V6);
                             ipv6_echo_time_interval = IHC_DEFAULT_RETRY_INTERVAL;
                         }
@@ -2043,34 +1740,28 @@ int ihc_echo_handler(void)
                         // Set sysevent so that other modules(eg: selfheal) can detect the gw status for logging purpose
                         if(sysevent_fd != -1)
                         {
-				IhcInfo ("[%s :%d] KAVYA ",__FUNCTION__, __LINE__);
                             sysevent_set(sysevent_fd, sysevent_token, IPOE_HEALTH_CHECK_V6_STATUS, IPOE_STATUS_FAILED, 0);
                         }
                     }
 
                     if (g_send_V6_echo)
                     {
-			    IhcInfo ("[%s :%d] KAVYA ",__FUNCTION__, __LINE__);
                         char wanInterface[IHC_MAX_STRING_LENGTH] = {0};
                         if ((ret = ihc_get_V6_defgateway_wan_interface(wanInterface, sizeof(wanInterface), defaultGatewayV6, sizeof(defaultGatewayV6))) == IHC_SUCCESS)
                         {
-				IhcInfo ("[%s :%d] KAVYA ",__FUNCTION__, __LINE__);
                             IhcInfo("Sending V6 echo packets interface [%s] defaultGateway [%s]", wanInterface, defaultGatewayV6);
                             char BNGMACAddress[IHC_MAX_STRING_LENGTH] = {0};
 
                             //update global mac array if arp cacahe has a new valid mac entry for GW
                             if (ihc_get_V6_bng_MAC_address(defaultGatewayV6, BNGMACAddress, sizeof(BNGMACAddress)) == IHC_SUCCESS)
                             {
-				    IhcInfo ("[%s :%d] KAVYA ",__FUNCTION__, __LINE__);
                                 if( strncasecmp(BNGMACAddressV6, BNGMACAddress, strlen(BNGMACAddress)) ) 
                                 {
-					IhcInfo ("[%s :%d] KAVYA ",__FUNCTION__, __LINE__);
                                     strncpy(BNGMACAddressV6, BNGMACAddress, IHC_MAX_STRING_LENGTH); 
                                 }
                             }
                             else
                             {
-				    IhcInfo ("[%s :%d] KAVYA ",__FUNCTION__, __LINE__);
                                 IhcError("%s-%d: Sending v6 Echo packet for Interface (%s) failed to get MAC (%s)", __FUNCTION__, __LINE__, wanInterface, BNGMACAddress);
                             }
                             /* There are different reasons for a lost mac in arp cache. ipoe session should always be active
@@ -2078,29 +1769,23 @@ int ihc_echo_handler(void)
                             */
                             if( validateMacAddr(BNGMACAddressV6) == IHC_SUCCESS ) // Send V6 echo packets
                             {
-				    IhcInfo ("[%s :%d] KAVYA ",__FUNCTION__, __LINE__);
                                 char tmpBNGMACAddress[IHC_MAX_STRING_LENGTH] = {0};
                                 strncpy(tmpBNGMACAddress, BNGMACAddressV6, IHC_MAX_STRING_LENGTH);
-				IhcInfo ("[%s :%d] KAVYA Calling ihc_sendV6EchoPackets",__FUNCTION__, __LINE__);
                                 if (!ihc_sendV6EchoPackets(wanInterface, tmpBNGMACAddress))
                                 {
-				    IhcInfo ("[%s :%d] KAVYA ",__FUNCTION__, __LINE__);
                                     ipv6_echo_time_interval = IHC_DEFAULT_RETRY_INTERVAL;
 
                                     if( ( FALSE == Is_v6_bfd_1stpkt_failure_occurs ) && ( g_echo_V6_failure_count > 0 ) )
                                     {
-					    IhcInfo ("[%s :%d] KAVYA ",__FUNCTION__, __LINE__);
                                         IhcError("IHC_V6_1ST_PKT_FAILURE :: IHC: IPOE health check(IPv6) first packet failure");
                                         Is_v6_bfd_1stpkt_failure_occurs = TRUE;
                                     }
                                     g_echo_V6_failure_count++;
-				    IhcInfo ("[%s :%d] KAVYA g_echo_V6_failure_count = [%d]\n",__FUNCTION__, __LINE__,g_echo_V6_failure_count);
                                 }
                                 else
                                 {
                                     IhcError("ihc_sendV6EchoPackets failed %s", strerror(errno));
                                     g_echo_V6_failure_count++;
-				    IhcInfo ("[%s :%d] KAVYA g_echo_V6_failure_count = [%d]\n",__FUNCTION__, __LINE__,g_echo_V6_failure_count);
                                 }
 
                                 if (!clock_gettime(CLOCK_MONOTONIC, &echoTime))
@@ -2110,13 +1795,11 @@ int ihc_echo_handler(void)
                             }
                             else
                             {
-				    IhcInfo ("[%s :%d] KAVYA ",__FUNCTION__, __LINE__);
                                 IhcNotice("ihc_sendV6EchoPackets invalid BNGMAC[%s]",BNGMACAddressV6);
                             }
                         }
                         else
                         {
-				IhcInfo ("[%s :%d] KAVYA ",__FUNCTION__, __LINE__);
                             IhcInfo("ihc_get_defgateway_wan_interface V6 failed %d", ret); /* it can fail in PPP connections */
                         }
                     }

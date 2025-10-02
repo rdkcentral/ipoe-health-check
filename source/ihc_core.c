@@ -686,14 +686,13 @@ static uint16_t calculate_udp6_checksum(struct ip6_hdr ipv6_header, struct udphd
     char packet_buffer[IP_MAXPACKET];
     char *buffer_ptr = packet_buffer;
     int checksum_len = 0;
+    int i;
 
     // Add source IPv6 address (128 bits)
     append_to_buffer(&buffer_ptr, &checksum_len, &ipv6_header.ip6_src.s6_addr,sizeof(ipv6_header.ip6_src.s6_addr));
     append_to_buffer(&buffer_ptr, &checksum_len, &ipv6_header.ip6_dst.s6_addr,sizeof(ipv6_header.ip6_dst.s6_addr));
 
     // Add UDP length (32 bits)
-//    uint32_t udp_payload_length = ntohs(udp_header.len);
-//    append_to_buffer(&buffer_ptr, &checksum_len, &udp_payload_length,sizeof(udp_payload_length));
     append_to_buffer(&buffer_ptr, &checksum_len, &udp_header.len,sizeof(udp_header.len));
 
     // Add zero padding (24 bits)
@@ -710,30 +709,21 @@ static uint16_t calculate_udp6_checksum(struct ip6_hdr ipv6_header, struct udphd
     append_to_buffer(&buffer_ptr, &checksum_len, &udp_header.len, sizeof(udp_header.len));
 
     // Add zeroed checksum field (16 bits)
-//    uint16_t zero_checksum = 0;
-//    append_to_buffer(&buffer_ptr, &checksum_len, &zero_checksum, sizeof(zero_checksum));
     memset(buffer_ptr, 0, 2);
     buffer_ptr += 2;
     checksum_len += 2;
+
     // Add payload data
     append_to_buffer(&buffer_ptr, &checksum_len, payload, payload_len);
 
     // Pad to 16-bit boundary if needed
-/*    if (payload_len % 2 != 0)
-    {
-        *buffer_ptr = 0;
-        buffer_ptr++;
-        checksum_len++;
-    }*/
-    int i ;
     for (i = 0; i < payload_len%2 ; i++ , buffer_ptr++)
     {
         *buffer_ptr = 0;
         buffer_ptr++;
         checksum_len++;
     }	
-IhcInfo ("%s:%d KAVYA checksum_len = [%d]",__FUNCTION__,__LINE__,checksum_len);
-IhcInfo ("%s:%d KAVYA compute_checksum =  [%hu]",__FUNCTION__,__LINE__,compute_checksum((uint16_t *)packet_buffer, checksum_len));
+
     return compute_checksum((uint16_t *)packet_buffer, checksum_len);
 }
 

@@ -753,6 +753,9 @@ static uint16_t udp6_checksum(struct ip6_hdr iphdr, struct udphdr udphdr, uint8_
         ptr++;
         chksumlen++;
     }
+  IhcInfo ("[%s :%d] buffer  = [%s]",__FUNCTION__, __LINE__,buf);
+  IhcInfo ("[%s :%d] chksumlen  = [%d]",__FUNCTION__, __LINE__,chksumlen);
+    
 IhcInfo ("[%s :%d] checksum = [%hu]",__FUNCTION__, __LINE__, checksum((uint16_t *)buf, chksumlen));
     return checksum((uint16_t *)buf, chksumlen);
 }
@@ -855,9 +858,11 @@ static uint16_t calculate_udp6_checksum(struct ip6_hdr ipv6_header, struct udphd
         buffer_ptr++;
         checksum_len++;
     }
-    
-    IhcInfo ("[%s :%d] compute_checksum = [%hu]",__FUNCTION__, __LINE__, compute_checksum((uint16_t *)packet_buffer, checksum_len));	    
-    return compute_checksum((uint16_t *)packet_buffer, checksum_len);
+  IhcInfo ("[%s :%d] packet_buffer  = [%s]",__FUNCTION__, __LINE__,packet_buffer);
+  IhcInfo ("[%s :%d] checksum_len  = [%d]",__FUNCTION__, __LINE__,checksum_len);
+    IhcInfo ("[%s :%d] compute_checksum = [%hu]",__FUNCTION__, __LINE__, compute_checksum((uint16_t *)packet_buffer, checksum_len));	   
+   IhcInfo ("[%s :%d] checksum = [%hu]",__FUNCTION__, __LINE__, checksum((uint16_t *)packet_buffer, checksum_len)); 
+    return checksum((uint16_t *)packet_buffer, checksum_len);
 }
 
 /**
@@ -873,7 +878,7 @@ static int ihc_sendV6EchoPackets(char *interface, char *MACaddress)
 	    IhcInfo ("[%s :%d] KAVYA ENTER ..",__FUNCTION__, __LINE__);
     int status = 0;
     int datalen = 0;
-    int frame_length = 0;
+    int frame_length = 0;payload
     int bytes = 0;
     struct ip6_hdr iphdr;
     struct udphdr udphdr;
@@ -1015,31 +1020,50 @@ static int ihc_sendV6EchoPackets(char *interface, char *MACaddress)
 
     // Destination and Source MAC addresses
     memcpy(ether_frame, dst_mac, IHC_MACADDR_LEN);
+    int i = 0;
+    for(i=0; i<IHC_MACADDR_LEN ; i++)
+    {
+        IhcInfo ("[%d] = [%hhu]",i,ether_frame[i]);
+    }
     memcpy(ether_frame + IHC_MACADDR_LEN, src_mac, IHC_MACADDR_LEN);
 
+    for(i=IHC_MACADDR_LEN;i<IHC_MACADDR_LEN+IHC_MACADDR_LEN;i++)
+    {
+	    IhcInfo ("[%d] = [%hhu]",ether_frame[i]);
+    }
     // Next is ethernet type code (ETH_P_IPV6 for IPv6).
     // http://www.iana.org/assignments/ethernet-numbers
     ether_frame[12] = ETH_P_IPV6 / 256;
     ether_frame[13] = ETH_P_IPV6 % 256;
-
+IhcInfo ("[12] = [%hhu]",ether_frame[12]);
+IhcInfo ("[13] = [%hhu]",ether_frame[13]);
     // Next is ethernet frame data (IPv6 header + UDP header + UDP data).
 
     // IPv6 header
     memcpy(ether_frame + IHC_ETH_HDRLEN, &iphdr, IHC_IP6_HDRLEN);
-
+for(i=IHC_ETH_HDRLEN ; i< IHC_ETH_HDRLEN+IHC_IP6_HDRLEN ; i++)
+{
+	IhcInfo ("[%d] = [%hhu]",ether_frame[i]);
+}
     // UDP header
     memcpy(ether_frame + IHC_ETH_HDRLEN + IHC_IP6_HDRLEN, &udphdr, IHC_UDP_HDRLEN);
-
+for(i=IHC_ETH_HDRLEN + IHC_IP6_HDRLEN ; i< IHC_ETH_HDRLEN + IHC_IP6_HDRLEN+IHC_UDP_HDRLEN ; i++)
+{
+	IhcInfo ("[%d] = [%hhu]",ether_frame[i]);
+}
     // UDP data
     memcpy(ether_frame + IHC_ETH_HDRLEN + IHC_IP6_HDRLEN + IHC_UDP_HDRLEN, data, datalen);
-
-    IhcInfo ("[%s :%d] KAVYA  frame_length = [%d]\n",__FUNCTION__, __LINE__,frame_length);
+for(i=IHC_ETH_HDRLEN + IHC_IP6_HDRLEN+IHC_UDP_HDRLEN ; i< IHC_ETH_HDRLEN + IHC_IP6_HDRLEN + IHC_UDP_HDRLEN+datalen; i++)
+{
+	IhcInfo ("[%d] = [%hhu]",ether_frame[i]);
+}
+    IhcInfo ("[%s :%d] KAVYA  frame_length = [%d] datalen = [%d]",__FUNCTION__, __LINE__,frame_length,datalen);
     IhcInfo ("[%s :%d] KAVYA ether_frame = ",__FUNCTION__, __LINE__);
-    int i;
+/*    int i;
     for(i=0;i<frame_length;i++)
     {
         IhcInfo ("[%hhu]",ether_frame[i]);
-    }
+    }*/
     // Submit request for a raw socket descriptor.
     if ((sockV6 = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) < 0)
     {
@@ -1087,8 +1111,18 @@ IhcInfo ("[%s :%d] KAVYA Calling udp6_checksum..\n",__FUNCTION__, __LINE__);
 
     // Destination and Source MAC addresses
     memcpy(ether_frame, dst_mac, IHC_MACADDR_LEN);
+//    int i = 0;
+    for(i=0; i<IHC_MACADDR_LEN ; i++)
+    {
+        IhcInfo ("[%d] = [%hhu]",i,ether_frame[i]);
+    }
+    
     memcpy(ether_frame + IHC_MACADDR_LEN, src_mac, IHC_MACADDR_LEN);
-
+    for(i=IHC_MACADDR_LEN;i<IHC_MACADDR_LEN+IHC_MACADDR_LEN;i++)
+    {
+            IhcInfo ("[%d] = [%hhu]",ether_frame[i]);
+    }
+ 
     // Next is ethernet type code (ETH_P_IPV6 for IPv6).
     // http://www.iana.org/assignments/ethernet-numbers
     ether_frame[12] = ETH_P_IPV6 / 256;
@@ -1098,19 +1132,29 @@ IhcInfo ("[%s :%d] KAVYA Calling udp6_checksum..\n",__FUNCTION__, __LINE__);
 
     // IPv6 header
     memcpy(ether_frame + IHC_ETH_HDRLEN, &iphdr, IHC_IP6_HDRLEN);
-
+for(i=IHC_ETH_HDRLEN ; i< IHC_ETH_HDRLEN+IHC_IP6_HDRLEN ; i++)
+{
+        IhcInfo ("[%d] = [%hhu]",ether_frame[i]);
+}
     // UDP header
     memcpy(ether_frame + IHC_ETH_HDRLEN + IHC_IP6_HDRLEN, &udphdr, IHC_UDP_HDRLEN);
-
+for(i=IHC_ETH_HDRLEN + IHC_IP6_HDRLEN ; i< IHC_ETH_HDRLEN + IHC_IP6_HDRLEN+IHC_UDP_HDRLEN ; i++)
+{
+        IhcInfo ("[%d] = [%hhu]",ether_frame[i]);
+}
     // UDP data
     memcpy(ether_frame + IHC_ETH_HDRLEN + IHC_IP6_HDRLEN + IHC_UDP_HDRLEN, data, datalen);
+for(i=IHC_ETH_HDRLEN + IHC_IP6_HDRLEN+IHC_UDP_HDRLEN ; i< IHC_ETH_HDRLEN + IHC_IP6_HDRLEN + IHC_UDP_HDRLEN+datalen; i++)
+{
+        IhcInfo ("[%d] = [%hhu]",ether_frame[i]);
+}
 
     IhcInfo ("[%s :%d] KAVYA  frame_length = [%d]\n",__FUNCTION__, __LINE__,frame_length);
     IhcInfo ("[%s :%d] KAVYA ether_frame = ",__FUNCTION__, __LINE__);
-    for(i=0;i<frame_length;i++)
+/*    for(i=0;i<frame_length;i++)
     {
         IhcInfo ("[%hhu]",ether_frame[i]);
-    }
+    }*/
     // Submit request for a raw socket descriptor.
     if ((sockV6 = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) < 0)
     {

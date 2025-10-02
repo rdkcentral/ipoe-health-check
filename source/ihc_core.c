@@ -753,7 +753,7 @@ static uint16_t udp6_checksum(struct ip6_hdr iphdr, struct udphdr udphdr, uint8_
         ptr++;
         chksumlen++;
     }
-
+IhcInfo ("[%s :%d] checksum = [%hu]",__FUNCTION__, __LINE__, checksum((uint16_t *)buf, chksumlen));
     return checksum((uint16_t *)buf, chksumlen);
 }
 

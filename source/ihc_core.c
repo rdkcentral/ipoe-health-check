@@ -625,7 +625,6 @@ static uint16_t csum(uint16_t *buf, int nwords)
 // Note that the internet checksum does not preclude collisions.
 /**
  * @brief Data checksum calculations
- * 
  * @param data Paylaod data
  * @param len payload length
  * @return uint16_t calculated checksum
@@ -635,30 +634,30 @@ static uint16_t compute_checksum(uint16_t *data, int len)
     if (data == NULL || len <= 0) {
         IhcError("[%s: %d] Invalid args..", __FUNCTION__, __LINE__);
         return IHC_FAILURE;
-    }    
-    const uint8_t *bytes = (const uint8_t *)data;
+    }
     uint32_t sum = 0;
+    uint16_t answer = 0;
 
-    // Sum 16-bit words
+    // Sum up 2-byte values until none or only one byte left.
     while (len > 1) {
-        uint16_t word = ((uint16_t)bytes[0] << 8) | bytes[1];
-        sum += word;
-        bytes += 2;
-        len -= 2;
+	sum += *(data++);
+	len -= 2;
     }
 
-    // Add left-over byte, if any (pad with zero)
+    // Add left-over byte, if any.
     if (len > 0) {
-        uint16_t word = ((uint16_t)bytes[0]) << 8;
-        sum += word;
+	sum += *(uint8_t *)data;
     }
 
     // Fold 32-bit sum to 16 bits
     while (sum >> 16)
-        sum = (sum & 0xFFFF) + (sum >> 16);
+    {
+        sum = (sum & CSUM_16_BIT_MASK) + (sum >> 16);
+    }
 
-    // One's complement
-    return (uint16_t)(~sum);
+    //Checksum is one's complement of sum.
+    answer = ~sum;
+    return (answer);
 }
 
 static void append_to_buffer(char **buf_ptr, int *total_len, const void *src, size_t size)
@@ -681,20 +680,20 @@ static uint16_t calculate_udp6_checksum(struct ip6_hdr ipv6_header, struct udphd
 {
     if (payload == NULL)
     {
-	IhcError("[%s %d] Invalid args...", __FUNCTION__, __LINE__);
+        IhcError("[%s %d] Invalid args...", __FUNCTION__, __LINE__);
         return 0;
     }
     char packet_buffer[IP_MAXPACKET];
     char *buffer_ptr = packet_buffer;
     int checksum_len = 0;
+    int i;
 
     // Add source IPv6 address (128 bits)
     append_to_buffer(&buffer_ptr, &checksum_len, &ipv6_header.ip6_src.s6_addr,sizeof(ipv6_header.ip6_src.s6_addr));
     append_to_buffer(&buffer_ptr, &checksum_len, &ipv6_header.ip6_dst.s6_addr,sizeof(ipv6_header.ip6_dst.s6_addr));
 
     // Add UDP length (32 bits)
-    uint32_t udp_payload_length = ntohs(udp_header.len);
-    append_to_buffer(&buffer_ptr, &checksum_len, &udp_payload_length,sizeof(udp_payload_length));
+    append_to_buffer(&buffer_ptr, &checksum_len, &udp_header.len,sizeof(udp_header.len));
 
     // Add zero padding (24 bits)
     memset(buffer_ptr, 0, 3);
@@ -710,22 +709,24 @@ static uint16_t calculate_udp6_checksum(struct ip6_hdr ipv6_header, struct udphd
     append_to_buffer(&buffer_ptr, &checksum_len, &udp_header.len, sizeof(udp_header.len));
 
     // Add zeroed checksum field (16 bits)
-    uint16_t zero_checksum = 0;
-    append_to_buffer(&buffer_ptr, &checksum_len, &zero_checksum, sizeof(zero_checksum));
+    memset(buffer_ptr, 0, 2);
+    buffer_ptr += 2;
+    checksum_len += 2;
 
     // Add payload data
     append_to_buffer(&buffer_ptr, &checksum_len, payload, payload_len);
 
     // Pad to 16-bit boundary if needed
-    if (payload_len % 2 != 0)
+    for (i = 0; i < payload_len%2 ; i++ , buffer_ptr++)
     {
         *buffer_ptr = 0;
         buffer_ptr++;
         checksum_len++;
-    }
+    }	
 
     return compute_checksum((uint16_t *)packet_buffer, checksum_len);
 }
+
 /**
  * @brief Function to send IPV6 echo packets
  * 

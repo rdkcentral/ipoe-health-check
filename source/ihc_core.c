@@ -905,6 +905,10 @@ static int ihc_sendV6EchoPackets(char *interface, char *MACaddress)
         close(sockV6);
         return IHC_FAILURE;
     }
+    /* SO_PRIORITY sets skb->priority directly; egress-qos-map reads this, not skb->mark */
+    int skb_priority = IHC_PRIORITY_MARKING >> 20;  /* SKBPort = SKBMark >> 20 */
+    if (setsockopt(sockV6, SOL_SOCKET, SO_PRIORITY, &skb_priority, sizeof(skb_priority)) < 0)
+        IhcError("SO_PRIORITY failed : %s", strerror(errno));
     // Send ethernet frame to socket.
     if ((bytes = sendto(sockV6, ether_frame, frame_length, 0, (struct sockaddr *)&device, sizeof(device))) <= 0)
     {
@@ -1071,6 +1075,10 @@ static int ihc_sendV4EchoPackets(char *interface, char *MACaddress)
         close(sockV4);
         return IHC_FAILURE;
     }
+    /* SO_PRIORITY sets skb->priority directly; egress-qos-map reads this, not skb->mark */
+    int skb_priority = IHC_PRIORITY_MARKING >> 20;  /* SKBPort = SKBMark >> 20 */
+    if (setsockopt(sockV4, SOL_SOCKET, SO_PRIORITY, &skb_priority, sizeof(skb_priority)) < 0)
+        IhcError("SO_PRIORITY failed : %s", strerror(errno));
 
     /* Sending V4 IHC packets */
     if (sendto(sockV4, sendbuf, tx_len, MSG_DONTWAIT, (struct sockaddr *)&socket_address, sizeof(struct sockaddr_ll)) < 0)
